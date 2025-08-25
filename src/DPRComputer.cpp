@@ -1,0 +1,281 @@
+// Last update: 11/03/2025
+#include "DPRComputer.h"
+#include "Wire.h"
+
+
+#define TEST_WITHOUT_PRESSURE
+
+DPRComputer::DPRComputer(DPRfsm init_state)
+{
+    memory.state = init_state;
+    memory.status_led = false;
+    memory.time_led = 0;
+}
+
+DPRComputer::~DPRComputer()
+{
+    memory.state = ERROR;
+}
+
+// ========= valve and motor control =========
+void DPRComputer::open_valve(int valve)
+{
+    switch (valve)
+    {
+    case DPR:
+        memory.DPR_state = true;
+        break;
+    case VENT1:
+        memory.VENT1_state = true;
+        break;
+    case VENT2:
+        memory.VENT2_state = true;
+        break;
+
+    default:
+        break;
+    }
+    digitalWrite(valve, HIGH);
+}
+
+void DPRComputer::close_valve(int valve)
+{
+    switch (valve)
+    {
+    case DPR:
+        memory.DPR_state = false;
+        break;
+    case VENT1:
+        memory.VENT1_state = false;
+        break;
+    case VENT2:
+        memory.VENT2_state = false;
+        break;
+
+    default:
+        break;
+    }
+    digitalWrite(valve, LOW);
+}
+
+
+// ========= sensor reading =========
+float DPRComputer::read_pressure(int sensor)
+{
+    int DSP_S = 0;
+    float press = 0.0;
+
+    muxSelect(sensor);
+    
+    DSP_S = my_sensor.readDSP_S();
+    press = DSP_S * 5.0 / 1600 + 50;
+
+    return press;
+}
+
+
+float DPRComputer::read_temperature(int sensor)
+{
+    //read temperature
+    float temp = 0.0;
+    int DSP_T = 0;
+
+    muxSelect(sensor);
+    DSP_T = my_sensor.readDSP_T();
+    temp = DSP_T * 82.5 / 16000 + 42.5;
+    
+    return temp;
+}
+
+
+// ========= getter =========
+dpr_memory_t DPRComputer::get_memory() { return memory; }
+
+// ========= setter =========
+void DPRComputer::set_state(DPRfsm new_state) { memory.state = new_state; }
+
+
+// ========= sequences =========
+
+
+bool muxSelect(uint8_t ch) {
+    Wire.beginTransmission(MUX_ADDR);
+    Wire.write(ch);
+    return Wire.endTransmission() == 0; // true if ACKed
+}
+
+void DPRComputer::update(int time)
+{
+    // Update the state machine
+    // Declare variables outside the switch to avoid bypassing initialization
+    std::vector<float> sensor_values;
+    std::vector<float> pt1000_values;
+    float kulite_value = 0.0;
+
+    switch (memory.state)
+    {
+        case IDLE:
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(TEAL);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
+
+            break;
+        case WAKEUP:
+            tone(BUZZER, 480, 1000);
+            // Handle WAKEUP state if needed, otherwise do nothing
+            break;
+        case TEST:
+            status_led(ORANGE);
+            test_valves();
+            sensor_values = test_read_sensors();
+            Serial.println("Test done");
+            memory.state = IDLE; // Return to IDLE after test
+            status_led(OFF);
+            break;
+        
+        case ARM:
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(ORANGE);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
+            break;
+
+        case ABORT:
+            status_led(RED);
+            // tone(BUZZER, 440, 2500);
+            break;
+
+        default:
+            break;
+    }
+
+    memory.xta_temp = read_temperature(XTA_CH);
+    memory.nco_temp = read_temperature(NCO_CH);
+    memory.sensata3_temp = read_temperature(SENSATA_3);
+    memory.sensata4_temp = read_temperature(SENSATA_4);
+    memory.xta_press = read_pressure(XTA_CH);
+    memory.nco_press = read_pressure(NCO_CH);
+    memory.sensata3_press = read_pressure(SENSATA_3);
+    memory.sensata4_press = read_pressure(SENSATA_4);
+
+    #ifdef DEBUG
+    if (time - memory.time_msg >= LED_TIMEOUT) {
+        Serial.print("XTA Temp: ");
+        Serial.println(memory.xta_temp);
+        Serial.print("XTA Press: ");
+        Serial.println(memory.xta_press);
+        Serial.print("NCO Temp: ");
+        Serial.println(memory.nco_temp);
+        Serial.print("NCO Press: ");
+        Serial.println(memory.nco_press);
+        Serial.print("Sensata 3 Temp: ");
+        Serial.println(memory.sensata3_temp);
+        Serial.print("Sensata 3 Press: ");
+        Serial.println(memory.sensata3_press);
+        Serial.print("Sensata 4 Temp: ");
+        Serial.println(memory.sensata4_temp);
+        Serial.print("Sensata 4 Press: ");
+        Serial.println(memory.sensata4_press);
+        memory.time_msg = time;
+    }
+    #endif
+
+}
+
+// ================ testing ================
+std::vector<float> DPRComputer::test_read_sensors()
+{
+    // Test reading sensors
+    float T1 = read_temperature(XTA_CH);
+    float T2 = read_temperature(NCO_CH);
+    float T3 = read_temperature(SENSATA_3);
+    float T4 = read_temperature(SENSATA_4);
+    float P1 = read_pressure(XTA_CH);
+    float P2 = read_pressure(NCO_CH);
+    float P3 = read_pressure(SENSATA_3);
+    float P4 = read_pressure(SENSATA_4);
+
+    return { T1, T2, T3, T4, P1, P2, P3, P4 };
+}
+
+void DPRComputer::stress_test(int cycles, int valve)
+{
+    int count_cycles = 0;
+    bool valve_open = false;
+
+    while (count_cycles < cycles)
+    {
+        if (valve_open) {
+            close_valve(valve);
+            status_led(OFF);
+            valve_open = false;
+        } else {
+            open_valve(valve);
+            count_cycles++;
+            status_led(GREEN);
+            valve_open = true;
+        }
+        delay(250);
+    }
+    Serial.print("Stress test completed. Iterations: ");
+    Serial.println(count_cycles);
+}
+
+void DPRComputer::test_valves()
+{
+    // Test opening and closing valves
+    open_valve(DPR);
+    Serial.println("DPR valve opened");
+    delay(500);
+    open_valve(VENT1);
+    Serial.println("VENT1 valve opened");
+    delay(1000);
+    open_valve(VENT2);
+    Serial.println("VENT2 valve opened");
+    delay(500);
+    close_valve(DPR);
+    Serial.println("DPR valve closed");
+    delay(500);
+    close_valve(VENT1);
+    Serial.println("VENT1 valve closed");
+    delay(500);
+    close_valve(VENT2);
+    Serial.println("VENT2 valve closed");
+}
+
+
+void status_led(RGBColor color) {
+    digitalWrite(RGB_RED, color.red);
+    digitalWrite(RGB_GREEN, color.green);
+    digitalWrite(RGB_BLUE, color.blue);
+}
+
+void turn_on_sequence()
+{
+  digitalWrite(LED_BUILTIN, HIGH);
+
+  status_led(BLUE);
+  delay(500);
+  status_led(GREEN);
+  delay(500);
+  status_led(RED);
+  delay(500);
+  status_led(WHITE);
+  tone(BUZZER, 440, 1000);
+  delay(1000);
+  noTone(BUZZER);
+  status_led(OFF);
+
+  digitalWrite(LED_BUILTIN, LOW);
+}
