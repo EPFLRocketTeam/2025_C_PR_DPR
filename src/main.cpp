@@ -7,7 +7,7 @@
 // // Define I2C slave address for Raspberry Pi
 // #define SLAVE_ADDR 0x08
 
-DPRComputer computer(IDLE);
+DPRComputer computer(SAFE);
 
 // Variables for communication
 volatile uint8_t received_buffer[4];
@@ -71,11 +71,12 @@ void receiveEvent(int numBytes) {
       case AV_NET_DPR_PRESSURIZE:
         status_led(GREEN);
         Serial.println("Received AV_NET_DPR_PRESSURIZE command");
+        computer.set_state(PRESSURIZATION_ETH);
         break;
 
       case AV_NET_DPR_ABORT:
         Serial.println("Received AV_NET_DPR_ABORT command");
-        // responseValue = computer.read_pressure(P_OIN);
+        computer.set_state(ABORT);
         break;
 
       case AV_NET_DPR_VALVES_STATE: {
@@ -83,26 +84,26 @@ void receiveEvent(int numBytes) {
         Serial.println("Received AV_NET_DPR_VALVES_STATE command");
         uint32_t res;
         memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
-        uint8_t valves_vent1 = received_buffer[0];
-        uint8_t valves_dpr = received_buffer[1];
+        uint8_t valves_vx = received_buffer[0];
+        uint8_t valves_pn = received_buffer[1];
         uint8_t valves_vent2 = received_buffer[2];
    
 
-        if (valves_dpr == AV_NET_CMD_ON) {
-          computer.open_valve(DPR);
+        if (valves_pn == AV_NET_CMD_ON) {
+          computer.open_valve(PN);
           status_led(GREEN);
-        } else if (valves_dpr == AV_NET_CMD_OFF) {
-          computer.close_valve(DPR);
+        } else if (valves_pn == AV_NET_CMD_OFF) {
+          computer.close_valve(PN);
           status_led(ORANGE);
         } else {
           status_led(RED);
         }
 
-        if (valves_vent1 == AV_NET_CMD_ON) {
-          computer.open_valve(VENT1);
+        if (valves_vx == AV_NET_CMD_ON) {
+          computer.open_valve(VX);
           status_led(GREEN);
-        } else if (valves_vent1 == AV_NET_CMD_OFF) {
-          computer.close_valve(VENT1);
+        } else if (valves_vx == AV_NET_CMD_OFF) {
+          computer.close_valve(VX);
           status_led(ORANGE);
         } else {
           status_led(RED);
@@ -119,11 +120,6 @@ void receiveEvent(int numBytes) {
         }
         break;
       }
-
-      case AV_NET_DPR_NB_REG:
-        Serial.println("Received AV_NET_DPR_NB_REG command");
-        // responseValue = computer.get_nb_reg();
-        break;
 
       default:
         Serial.println("Unknown command received");
@@ -150,50 +146,28 @@ void requestEvent() {
 
   switch (received_command)
   {
-  case AV_NET_DPR_L_TANK1:
+
+  case AV_NET_DPR_P_XTA:
     Serial.println("Received AV_NET_DPR_L_TANK1 command");
-    resp_val_float = 0.0f;
-    is_resp_int = false; // Ensure we are sending a float response
-
-    break;
-
-    case AV_NET_DPR_T_TANK1:
-    Serial.println("Received AV_NET_DPR_T_TANK1 command");
-    resp_val_float = memory.tank1_temp;
+    resp_val_float = computer.filterTankPressure();
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
-  case AV_NET_DPR_P_TANK1:
-    Serial.println("Received AV_NET_DPR_P_TANK1 command");
-    resp_val_float = memory.tank1_press;
-    is_resp_int = false; // Ensure we are sending a float response
-    break;
 
-  case AV_NET_DPR_P_TANK2:
-    Serial.println("Received AV_NET_DPR_P_TANK2 command");
-    resp_val_float = memory.tank2_press;
-    is_resp_int = false; // Ensure we are sending a float response
-    break;
-
-  case AV_NET_DPR_T_TANK2:
-    Serial.println("Received AV_NET_DPR_T_TANK2 command");
-    resp_val_float = memory.tank2_temp;
-    is_resp_int = false; // Ensure we are sending a float response
-    break;
 
   case AV_NET_DPR_VALVES_STATE: {
       status_led(GREEN);
       Serial.println("Received AV_NET_PRB_VALVES_STATE read command");
-      bool DPR_state = memory.DPR_state;
-      bool VENT1_state = memory.VENT1_state;
+      bool PN_state = memory.PN_state;
+      bool VX_state = memory.VX_state;
       bool VENT2_state = memory.VENT2_state;
 
-      uint8_t response_DPR = (DPR_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
-      uint8_t response_VENT1 = (VENT1_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      uint8_t response_PN = (PN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      uint8_t response_VENT1 = (VX_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
       uint8_t response_VENT2 = (VENT2_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
 
       // responseValue = 0; // Reset responseValue
-      resp_val_int = (response_VENT2 << 16) | (response_DPR << 8) | response_VENT1;
+      resp_val_int = (response_VENT2 << 16) | (response_PN << 8) | response_VENT1;
       is_resp_int = true;
       break;
     }
@@ -213,8 +187,8 @@ void requestEvent() {
 void setup() {
 
   //PIN configuration
-  pinMode(DPR, OUTPUT);
-  pinMode(VENT1, OUTPUT);
+  pinMode(PN, OUTPUT);
+  pinMode(VX, OUTPUT);
   pinMode(VENT2, OUTPUT);
 
   pinMode(RESET, OUTPUT);
@@ -238,11 +212,11 @@ void setup() {
   analogReadResolution(12);
 
   Serial.begin(115200); // For debugging
-  Serial.println("DPR Computer started");
+  Serial.println("PN Computer started");
 
   turn_on_sequence();
 
-  Serial.println("DPR Computer setup done");
+  Serial.println("PN Computer setup done");
 }
 
 PTE7300_I2C mySensor; // attach sensor

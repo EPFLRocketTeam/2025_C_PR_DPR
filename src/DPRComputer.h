@@ -1,6 +1,5 @@
 // Last update: 11/03/2025
 #include "constant.h"
-#include "DPRControl.h"
 #include "./2024_C_AV_INTRANET/intranet_commands.h"
 #include "PTE7300_I2C.h"
 
@@ -11,26 +10,60 @@ typedef struct dpr_memory_t {
     bool status_led;
     int time_led;
     int time_msg;
-    bool DPR_state;
-    bool VENT1_state;
+    bool PN_state;
+    bool VX_state;
     bool VENT2_state;
     float tank1_temp;
     float tank2_temp;
+    float tank3_temp;
     float tank1_press;
     float tank2_press;
-    float tank3_temp;
     float tank3_press;
     float copv_temp;
     float copv_press;
 } dpr_memory_t;
 
+typedef struct dpr_memory_controller_t {
+    float tankPressure;
+    float copvPressure;
+    float initialCopvPressure;
+    float limitPressure;
+    float rampedPressure;
+    float fullScalePressure;
+    float error;
+    float lastError;
+    float integral;
+    float derivative;
+    float kp;
+    float ki;
+    float kd;
+    float dutyRatio;
+    float dutyTime;
+    int startTime;
+    int lastTime;
+    int controlPeriod;
+    bool initialized;
+} dpr_memory_controller_t;
+
 class DPRComputer
 {
 private:
     dpr_memory_t memory;
+    dpr_memory_controller_t memory_controller;
     PTE7300_I2C my_sensor;
     int16_t value_sensor;
-    DPRControl dpr_controler;
+
+    //sensor reading
+    float read_pressure(int sensor);
+    float read_temperature(int sensor);
+
+    // =============== Controller ==============
+    float pid();
+    float computeFullScale();
+    void regulation();
+    void pressurization();
+    void actuate();
+    void initialize();
 
 public:
     DPRComputer(DPRfsm);
@@ -39,11 +72,6 @@ public:
     //valve and motor control
     void open_valve(int valve);
     void close_valve(int valve);
-
-    //sensor reading
-    float read_pressure(int sensor);
-    float read_temperature(int sensor);
-
     
     //getters
     dpr_memory_t get_memory();
@@ -51,16 +79,10 @@ public:
     //setters
     void set_state(DPRfsm new_state);
 
-
-    // sequences
-
-
+    // FSM
     void update(int time);
 
-    // testing
-    std::vector<float> test_read_sensors();
-    void stress_test(int cycles, int valve);
-    void test_valves();
+    float filterTankPressure();
 };
 
 

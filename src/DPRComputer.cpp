@@ -10,23 +10,38 @@ DPRComputer::DPRComputer(DPRfsm init_state)
     memory.state = init_state;
     memory.status_led = false;
     memory.time_led = 0;
+    memory_controller.tankPressure = 0.0;
+    memory_controller.copvPressure = 0.0;
+    memory_controller.initialCopvPressure = 0.0;
+    memory_controller.limitPressure = 60;
+    memory_controller.rampedPressure = 0.0;
+    memory_controller.fullScalePressure = 1000;
+    memory_controller.error = 0.0;
+    memory_controller.lastError = 0.0;
+    memory_controller.integral = 0.0;
+    memory_controller.derivative = 0.0;
+    memory_controller.kp = 1.70;
+    memory_controller.ki = 0.3;
+    memory_controller.kd = 0.0;
+    memory_controller.dutyRatio = 0.0;
+    memory_controller.dutyTime = 0.0;
+    memory_controller.startTime = 0;
+    memory_controller.lastTime = 0;
+    memory_controller.controlPeriod = 0;
 }
 
-DPRComputer::~DPRComputer()
-{
-    memory.state = ERROR;
-}
+DPRComputer::~DPRComputer() {}
 
 // ========= valve and motor control =========
 void DPRComputer::open_valve(int valve)
 {
     switch (valve)
     {
-    case DPR:
-        memory.DPR_state = true;
+    case PN:
+        memory.PN_state = true;
         break;
-    case VENT1:
-        memory.VENT1_state = true;
+    case VX:
+        memory.VX_state = true;
         break;
     case VENT2:
         memory.VENT2_state = true;
@@ -42,11 +57,11 @@ void DPRComputer::close_valve(int valve)
 {
     switch (valve)
     {
-    case DPR:
-        memory.DPR_state = false;
+    case PN:
+        memory.PN_state = false;
         break;
-    case VENT1:
-        memory.VENT1_state = false;
+    case VX:
+        memory.VX_state = false;
         break;
     case VENT2:
         memory.VENT2_state = false;
@@ -111,71 +126,21 @@ void DPRComputer::set_state(DPRfsm new_state) { memory.state = new_state; }
 
 
 // ========= sequences =========
-
-
 bool muxSelect(uint8_t ch) {
     Wire.beginTransmission(MUX_ADDR);
     Wire.write(ch);
     return Wire.endTransmission() == 0; // true if ACKed
 }
 
+
+// ========== FSM ===========
 void DPRComputer::update(int time)
 {
     // Update the state machine
     // Declare variables outside the switch to avoid bypassing initialization
-    std::vector<float> sensor_values;
-    std::vector<float> pt1000_values;
-    float kulite_value = 0.0;
 
     switch (memory.state)
     {
-        case IDLE:
-            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
-                status_led(TEAL);
-                memory.time_led = time;
-                memory.status_led = true;
-            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
-                status_led(OFF);
-                memory.time_led = time;
-                memory.status_led = false;
-            }
-
-            break;
-        case WAKEUP:
-            tone(BUZZER, 480, 1000);
-            // Handle WAKEUP state if needed, otherwise do nothing
-            break;
-        case TEST:
-            status_led(ORANGE);
-            test_valves();
-            sensor_values = test_read_sensors();
-            Serial.println("Test done");
-            memory.state = IDLE; // Return to IDLE after test
-            status_led(OFF);
-            break;
-        
-        case ARM:
-            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
-                status_led(ORANGE);
-                memory.time_led = time;
-                memory.status_led = true;
-            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
-                status_led(OFF);
-                memory.time_led = time;
-                memory.status_led = false;
-            }
-
-            dpr_controler.regulation(this)
-
-            break;
-
-        case ABORT:
-            status_led(RED);
-            // tone(BUZZER, 440, 2500);
-            break;
-
-        case REGULATION:
-            
 
         default:
             break;
@@ -214,68 +179,126 @@ void DPRComputer::update(int time)
 
 }
 
-// ================ testing ================
-std::vector<float> DPRComputer::test_read_sensors()
-{
-    // Test reading sensors
-    float T1 = read_temperature(TANK1);
-    float T2 = read_temperature(TANK2);
-    float T3 = read_temperature(TANK3);
-    float T4 = read_temperature(COPV);
-    float P1 = read_pressure(TANK1);
-    float P2 = read_pressure(TANK2);
-    float P3 = read_pressure(TANK3);
-    float P4 = read_pressure(COPV);
+//==============================================================================================================
+void DPRComputer::initialize() {
+    // Valves in regulation state
+    open_valve(VX);
+    close_valve(VN);
+    close_valve(PN);
 
-    return { T1, T2, T3, T4, P1, P2, P3, P4 };
+    // Read initial COPV pressure
+    memory_controller.initialCopvPressure = memory.copv_press;
+
+    // initialize ramped pressure
+    memory_controller.rampedPressure = 0.0;
+
+    memory_controller.startTime = 0;
+    memory_controller.lastTime = 0;
 }
 
-void DPRComputer::stress_test(int cycles, int valve)
-{
-    int count_cycles = 0;
-    bool valve_open = false;
-
-    while (count_cycles < cycles)
-    {
-        if (valve_open) {
-            close_valve(valve);
-            status_led(OFF);
-            valve_open = false;
-        } else {
-            open_valve(valve);
-            count_cycles++;
-            status_led(GREEN);
-            valve_open = true;
-        }
-        delay(250);
+//==============================================================================================================
+void DPRComputer::regulation() {
+    if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
+        memory_controller.lastTime = millis();
+        memory_controller.tankPressure = filterTankPressure();
+        memory_controller.copvPressure = memory.copv_press;
+        memory_controller.error = memory_controller.limitPressure - memory_controller.tankPressure;
+        memory_controller.fullScalePressure = computeFullScale();
+        pid();
+        memory_controller.lastError = memory_controller.error;
+        memory_controller.dutyTime = memory_controller.dutyRatio * memory_controller.controlPeriod;
     }
-    Serial.print("Stress test completed. Iterations: ");
-    Serial.println(count_cycles);
 }
 
-void DPRComputer::test_valves()
-{
-    // Test opening and closing valves
-    open_valve(DPR);
-    Serial.println("DPR valve opened");
-    delay(500);
-    open_valve(VENT1);
-    Serial.println("VENT1 valve opened");
-    delay(1000);
-    open_valve(VENT2);
-    Serial.println("VENT2 valve opened");
-    delay(500);
-    close_valve(DPR);
-    Serial.println("DPR valve closed");
-    delay(500);
-    close_valve(VENT1);
-    Serial.println("VENT1 valve closed");
-    delay(500);
-    close_valve(VENT2);
-    Serial.println("VENT2 valve closed");
+//==============================================================================================================
+void DPRComputer::pressurization() {
+    if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
+        memory_controller.lastTime = millis();
+        if (memory_controller.rampedPressure < memory_controller.limitPressure) {
+            memory_controller.rampedPressure = (memory_controller.limitPressure / 10000)*millis() - (memory_controller.limitPressure*memory_controller.startTime)/10000;
+        }
+        else {
+            memory_controller.rampedPressure = memory_controller.limitPressure;
+        }
+        memory_controller.tankPressure = filterTankPressure();
+        memory_controller.copvPressure = memory.copv_press;
+        memory_controller.error = memory_controller.rampedPressure - memory_controller.tankPressure;
+        memory_controller.fullScalePressure = computeFullScale();
+        pid();
+        memory_controller.lastError = memory_controller.error;
+        memory_controller.dutyTime = memory_controller.dutyRatio * memory_controller.controlPeriod;
+    }
 }
 
+//==============================================================================================================
+float DPRComputer::filterTankPressure() {
+    float pressure1 = memory.tank1_press;
+    float pressure2 = memory.tank2_press;
+    float pressure3 = memory.tank3_press;
 
+    if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
+        return 0.5*(pressure2 + pressure3);
+    }
+    else if ((abs(pressure2 - pressure1) > abs(pressure1 - pressure3)) && (abs(pressure2 - pressure3) > abs(pressure1 - pressure3))) {
+        return 0.5*(pressure1 + pressure3);
+    }
+    else return 0.5*(pressure1 + pressure2);
+}
+
+float DPRComputer::filterTankTemp() {
+    float temp1 = memory.tank1_temp;
+    float temp2 = memory.tank2_temp;
+    float temp3 = memory.tank3_temp;
+
+    if ((abs(temp1 - temp2) > abs(temp2 - temp3)) && (abs(temp1 - temp3) > abs(temp2 - temp3))) {
+        return 0.5*(temp2 + temp3);
+    }
+    else if ((abs(temp2 - temp1) > abs(temp1 - temp3)) && (abs(temp2 - temp3) > abs(temp1 - temp3))) {
+        return 0.5*(temp1 + temp3);
+    }
+    else return 0.5*(temp1 + temp2);
+}
+
+float DPRComputer::computeFullScale() {
+    return (memory_controller.limitPressure+(memory_controller.copvPressure-memory_controller.initialCopvPressure)*(memory_controller.limitPressure/(memory_controller.initialCopvPressure-memory_controller.limitPressure)));
+}
+
+//==============================================================================================================
+float DPRComputer::pid() {
+    float correction = 0.0;
+
+    // integral contribution
+    memory_controller.integral += memory_controller.controlPeriod * memory_controller.error;
+
+    // derivative contribution
+    memory_controller.derivative = ((memory_controller.error - memory_controller.lastError)*1000) / memory_controller.controlPeriod;
+
+    // PID correction
+    correction = memory_controller.kp*memory_controller.error + memory_controller.ki*memory_controller.integral + memory_controller.kd*memory_controller.derivative;
+
+    if (correction > memory_controller.fullScalePressure) {
+        memory_controller.dutyRatio = 1.0;
+    }
+    else if (correction < 0) {
+        memory_controller.dutyRatio = 0.0;
+        memory_controller.integral = 0.0;
+    }
+    else { // normalisation
+        memory_controller.dutyRatio = correction / memory_controller.fullScalePressure;
+    }
+}
+
+//==============================================================================================================
+void DPRComputer::actuate() {
+    if (millis() - memory_controller.lastTime < memory_controller.dutyTime) {
+        open_valve(PN);
+    }
+    else {
+        close_valve(PN);
+    }
+}
+
+// ================ testing ================
 void status_led(RGBColor color) {
     digitalWrite(RGB_RED, color.red);
     digitalWrite(RGB_GREEN, color.green);

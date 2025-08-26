@@ -5,12 +5,12 @@
 #define DEBUG
 
 // PINs attribition on Teensy
-#define DPR         7
-#define VENT1       8
+// #define DPR         7
+// #define VENT1       8
 #define VENT2       9          //I-GP
 #define VENT_SPARE  10
 
-#define VE 10 //spare
+#define VX 10 //spare
 #define VN 8
 #define PN 7 // DPR
 
@@ -42,7 +42,8 @@ enum DPRfsm
     PRESSURIZATION_LOX,
     REGULATION,
     SLEEP,
-    PASSIVATION
+    PASSIVATION,
+    ABORT
 };
 
 struct RGBColor {
