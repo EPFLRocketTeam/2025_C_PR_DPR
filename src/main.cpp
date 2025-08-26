@@ -150,34 +150,34 @@ void requestEvent() {
 
   switch (received_command)
   {
-  case AV_NET_DPR_L_XTA:
-    Serial.println("Received AV_NET_DPR_L_XTA command");
+  case AV_NET_DPR_L_TANK1:
+    Serial.println("Received AV_NET_DPR_L_TANK1 command");
     resp_val_float = 0.0f;
     is_resp_int = false; // Ensure we are sending a float response
 
     break;
 
-    case AV_NET_DPR_T_XTA:
-    Serial.println("Received AV_NET_DPR_T_XTA command");
-    resp_val_float = memory.xta_temp;
+    case AV_NET_DPR_T_TANK1:
+    Serial.println("Received AV_NET_DPR_T_TANK1 command");
+    resp_val_float = memory.tank1_temp;
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
-  case AV_NET_DPR_P_XTA:
-    Serial.println("Received AV_NET_DPR_P_XTA command");
-    resp_val_float = memory.xta_press;
+  case AV_NET_DPR_P_TANK1:
+    Serial.println("Received AV_NET_DPR_P_TANK1 command");
+    resp_val_float = memory.tank1_press;
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
-  case AV_NET_DPR_P_NCO:
-    Serial.println("Received AV_NET_DPR_P_NCO command");
-    resp_val_float = memory.nco_press;
+  case AV_NET_DPR_P_TANK2:
+    Serial.println("Received AV_NET_DPR_P_TANK2 command");
+    resp_val_float = memory.tank2_press;
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
-  case AV_NET_DPR_T_NCO:
-    Serial.println("Received AV_NET_DPR_T_NCO command");
-    resp_val_float = memory.nco_temp;
+  case AV_NET_DPR_T_TANK2:
+    Serial.println("Received AV_NET_DPR_T_TANK2 command");
+    resp_val_float = memory.tank2_temp;
     is_resp_int = false; // Ensure we are sending a float response
     break;
 

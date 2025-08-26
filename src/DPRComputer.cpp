@@ -66,9 +66,24 @@ float DPRComputer::read_pressure(int sensor)
     float press = 0.0;
 
     muxSelect(sensor);
+
+    switch (sensor)
+    {
+    case TANK1:  //TANK1
+    case TANK2:  // TANK2
+    case TANK3:
+        DSP_S = my_sensor.readDSP_S();
+        press = DSP_S * 5.0 / 1600 + 50;
+    break;
+
+    case COPV:
+        // read 400 bar 
+        break;
     
-    DSP_S = my_sensor.readDSP_S();
-    press = DSP_S * 5.0 / 1600 + 50;
+    default:
+        break;
+    }
+   
 
     return press;
 }
@@ -149,6 +164,9 @@ void DPRComputer::update(int time)
                 memory.time_led = time;
                 memory.status_led = false;
             }
+
+            dpr_controler.regulation(this)
+
             break;
 
         case ABORT:
@@ -156,37 +174,40 @@ void DPRComputer::update(int time)
             // tone(BUZZER, 440, 2500);
             break;
 
+        case REGULATION:
+            
+
         default:
             break;
     }
 
-    memory.xta_temp = read_temperature(XTA_CH);
-    memory.nco_temp = read_temperature(NCO_CH);
-    memory.sensata3_temp = read_temperature(SENSATA_3);
-    memory.sensata4_temp = read_temperature(SENSATA_4);
-    memory.xta_press = read_pressure(XTA_CH);
-    memory.nco_press = read_pressure(NCO_CH);
-    memory.sensata3_press = read_pressure(SENSATA_3);
-    memory.sensata4_press = read_pressure(SENSATA_4);
+    memory.tank1_temp = read_temperature(TANK1);
+    memory.tank2_temp = read_temperature(TANK2);
+    memory.tank3_temp = read_temperature(TANK3);
+    memory.copv_temp = read_temperature(COPV);
+    memory.tank1_press = read_pressure(TANK1);
+    memory.tank2_press = read_pressure(TANK2);
+    memory.tank3_press = read_pressure(TANK3);
+    memory.copv_press = read_pressure(COPV);
 
     #ifdef DEBUG
     if (time - memory.time_msg >= LED_TIMEOUT) {
-        Serial.print("XTA Temp: ");
-        Serial.println(memory.xta_temp);
-        Serial.print("XTA Press: ");
-        Serial.println(memory.xta_press);
-        Serial.print("NCO Temp: ");
-        Serial.println(memory.nco_temp);
-        Serial.print("NCO Press: ");
-        Serial.println(memory.nco_press);
-        Serial.print("Sensata 3 Temp: ");
-        Serial.println(memory.sensata3_temp);
-        Serial.print("Sensata 3 Press: ");
-        Serial.println(memory.sensata3_press);
-        Serial.print("Sensata 4 Temp: ");
-        Serial.println(memory.sensata4_temp);
-        Serial.print("Sensata 4 Press: ");
-        Serial.println(memory.sensata4_press);
+        Serial.print("TANK1 Temp: ");
+        Serial.println(memory.tank1_temp);
+        Serial.print("TANK1 Press: ");
+        Serial.println(memory.tank1_press);
+        Serial.print("TANK2 Temp: ");
+        Serial.println(memory.tank2_temp);
+        Serial.print("TANK2 Press: ");
+        Serial.println(memory.tank2_press);
+        Serial.print("tank3 Temp: ");
+        Serial.println(memory.tank3_temp);
+        Serial.print("tank3 Press: ");
+        Serial.println(memory.tank3_press);
+        Serial.print("copv Temp: ");
+        Serial.println(memory.copv_temp);
+        Serial.print("copv Press: ");
+        Serial.println(memory.copv_press);
         memory.time_msg = time;
     }
     #endif
@@ -197,14 +218,14 @@ void DPRComputer::update(int time)
 std::vector<float> DPRComputer::test_read_sensors()
 {
     // Test reading sensors
-    float T1 = read_temperature(XTA_CH);
-    float T2 = read_temperature(NCO_CH);
-    float T3 = read_temperature(SENSATA_3);
-    float T4 = read_temperature(SENSATA_4);
-    float P1 = read_pressure(XTA_CH);
-    float P2 = read_pressure(NCO_CH);
-    float P3 = read_pressure(SENSATA_3);
-    float P4 = read_pressure(SENSATA_4);
+    float T1 = read_temperature(TANK1);
+    float T2 = read_temperature(TANK2);
+    float T3 = read_temperature(TANK3);
+    float T4 = read_temperature(COPV);
+    float P1 = read_pressure(TANK1);
+    float P2 = read_pressure(TANK2);
+    float P3 = read_pressure(TANK3);
+    float P4 = read_pressure(COPV);
 
     return { T1, T2, T3, T4, P1, P2, P3, P4 };
 }
