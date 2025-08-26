@@ -110,10 +110,10 @@ void receiveEvent(int numBytes) {
         }
 
         if (valves_vent2 == AV_NET_CMD_ON) {
-          computer.open_valve(VENT2);
+          computer.open_valve(VN);
           status_led(GREEN);
         } else if (valves_vent2 == AV_NET_CMD_OFF) {
-          computer.close_valve(VENT2);
+          computer.close_valve(VN);
           status_led(ORANGE);
         } else {
           status_led(RED);
@@ -160,11 +160,11 @@ void requestEvent() {
       Serial.println("Received AV_NET_PRB_VALVES_STATE read command");
       bool PN_state = memory.PN_state;
       bool VX_state = memory.VX_state;
-      bool VENT2_state = memory.VENT2_state;
+      bool VN_state = memory.VN_state;
 
       uint8_t response_PN = (PN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
       uint8_t response_VENT1 = (VX_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
-      uint8_t response_VENT2 = (VENT2_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      uint8_t response_VENT2 = (VN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
 
       // responseValue = 0; // Reset responseValue
       resp_val_int = (response_VENT2 << 16) | (response_PN << 8) | response_VENT1;
@@ -189,7 +189,7 @@ void setup() {
   //PIN configuration
   pinMode(PN, OUTPUT);
   pinMode(VX, OUTPUT);
-  pinMode(VENT2, OUTPUT);
+  pinMode(VN, OUTPUT);
 
   pinMode(RESET, OUTPUT);
   pinMode(RGB_RED, OUTPUT);

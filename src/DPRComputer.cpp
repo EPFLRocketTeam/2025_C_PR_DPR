@@ -43,8 +43,8 @@ void DPRComputer::open_valve(int valve)
     case VX:
         memory.VX_state = true;
         break;
-    case VENT2:
-        memory.VENT2_state = true;
+    case VN:
+        memory.VN_state = true;
         break;
 
     default:
@@ -63,8 +63,8 @@ void DPRComputer::close_valve(int valve)
     case VX:
         memory.VX_state = false;
         break;
-    case VENT2:
-        memory.VENT2_state = false;
+    case VN:
+        memory.VN_state = false;
         break;
 
     default:
@@ -141,6 +141,35 @@ void DPRComputer::update(int time)
 
     switch (memory.state)
     {
+        case PRESSURIZATION_ETH:
+            if (!memory_controller.initialized) {
+                initialize();
+                memory_controller.initialize = true;
+            }
+            pressurization();
+            actuate();
+        break;
+
+        case REGULATION:
+        if (!memory_controller.initialized) {
+            initialize();
+            memory_controller.initialized = true;
+        }
+        regulation();
+        actuate();
+        break;
+
+        case SAFE:
+            open_valve(VX);
+            close_valve(PN);
+            close_valve(VN);
+            break;
+
+        case HOLD:
+            close_valve(VX);
+            close_valve(PN);
+            close_valve(VN);
+            break;
 
         default:
             break;

@@ -7,7 +7,7 @@
 // PINs attribition on Teensy
 // #define DPR         7
 // #define VENT1       8
-#define VENT2       9          //I-GP
+//#define VENT2       9          //I-GP
 #define VENT_SPARE  10
 
 #define VX 10 //spare

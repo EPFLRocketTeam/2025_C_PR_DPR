@@ -12,7 +12,7 @@ typedef struct dpr_memory_t {
     int time_msg;
     bool PN_state;
     bool VX_state;
-    bool VENT2_state;
+    bool VN_state;
     float tank1_temp;
     float tank2_temp;
     float tank3_temp;
