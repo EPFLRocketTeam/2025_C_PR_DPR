@@ -27,8 +27,8 @@
 #define SENS_ADDR   0x6C        //or 0x6C
 #define TANK1       0x01        // channel 0
 #define TANK2       0x02        // channel 1
-#define TANK3       0x04        // channel 2
-#define COPV        0x08        // channel 3
+#define TANK3       0x08        // channel 2
+#define COPV        0x04        // channel 3
 
 // Status 
 #define LED_TIMEOUT 1000 // 1 second
