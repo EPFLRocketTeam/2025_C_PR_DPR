@@ -5,7 +5,7 @@
 
 #define TEST_WITHOUT_PRESSURE
 
-DPRComputer::DPRComputer(DPRfsm init_state)
+DPRComputer::DPRComputer(DPR_FSM init_state)
 {
     memory.state = init_state;
     memory.status_led = false;
@@ -92,7 +92,9 @@ float DPRComputer::read_pressure(int sensor)
     break;
 
     case COPV:
-        // read 400 bar 
+        // read 400 bar
+        DSP_S = my_sensor.readDSP_S();
+        press = DSP_S * 5.0 / 1600 + 50; // Change formula for 400 bar
         break;
     
     default:
@@ -122,10 +124,9 @@ float DPRComputer::read_temperature(int sensor)
 dpr_memory_t DPRComputer::get_memory() { return memory; }
 
 // ========= setter =========
-void DPRComputer::set_state(DPRfsm new_state) { memory.state = new_state; }
+void DPRComputer::set_state(DPR_FSM new_state) { memory.state = new_state; }
 
 
-// ========= sequences =========
 bool muxSelect(uint8_t ch) {
     Wire.beginTransmission(MUX_ADDR);
     Wire.write(ch);
@@ -141,23 +142,25 @@ void DPRComputer::update(int time)
 
     switch (memory.state)
     {
-        case PRESSURIZATION_ETH:
-            if (!memory_controller.initialized) {
-                initialize();
-                memory_controller.initialize = true;
-            }
+        case INITIALIZE_PRESSURIZATION:
+            initialize();
+            memory.state = PRESSURIZATION;
+            break;
+
+        case PRESSURIZATION:
             pressurization();
             actuate();
-        break;
+            break;
+
+        case INITIALIZE_REGULATION:
+            initialize();
+            memory.state = REGULATION;
+            break;
 
         case REGULATION:
-        if (!memory_controller.initialized) {
-            initialize();
-            memory_controller.initialized = true;
-        }
-        regulation();
-        actuate();
-        break;
+            regulation();
+            actuate();
+            break;
 
         case SAFE:
             open_valve(VX);
@@ -169,6 +172,28 @@ void DPRComputer::update(int time)
             close_valve(VX);
             close_valve(PN);
             close_valve(VN);
+
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(ORANGE);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
+            break;
+        
+        case MANUAL:
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(GREEN);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
             break;
 
         default:
@@ -293,7 +318,7 @@ float DPRComputer::computeFullScale() {
 }
 
 //==============================================================================================================
-float DPRComputer::pid() {
+void DPRComputer::pid() {
     float correction = 0.0;
 
     // integral contribution

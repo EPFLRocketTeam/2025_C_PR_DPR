@@ -7,7 +7,7 @@
 // // Define I2C slave address for Raspberry Pi
 // #define SLAVE_ADDR 0x08
 
-DPRComputer computer(SAFE);
+DPRComputer computer(HOLD);
 
 // Variables for communication
 volatile uint8_t received_buffer[4];
@@ -68,19 +68,24 @@ void receiveEvent(int numBytes) {
         status_led(PURPLE);
         break;
 
-      case AV_NET_DPR_PRESSURIZE:
-        status_led(GREEN);
-        Serial.println("Received AV_NET_DPR_PRESSURIZE command");
-        computer.set_state(PRESSURIZATION_ETH);
-        break;
+      case AV_NET_DPR_PRESSURIZE: {
+          status_led(GREEN);
+          Serial.println("Received AV_NET_DPR_PRESSURIZE command");
+          dpr_memory_t memory = computer.get_memory();
+          if (memory.state == HOLD) {
+              computer.set_state(INITIALIZE_PRESSURIZATION);
+          }
+          break;
+        }
 
       case AV_NET_DPR_ABORT:
         Serial.println("Received AV_NET_DPR_ABORT command");
-        computer.set_state(ABORT);
+        computer.set_state(HOLD);
         break;
 
       case AV_NET_DPR_VALVES_STATE: {
         status_led(PURPLE);
+        computer.set_state(MANUAL);
         Serial.println("Received AV_NET_DPR_VALVES_STATE command");
         uint32_t res;
         memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
@@ -153,21 +158,34 @@ void requestEvent() {
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
+  case AV_NET_DPR_T_XTA:
+    Serial.println("Received AV_NET_DPR_T_TANK1 command");
+    resp_val_float = computer.filterTankTemp();
+    is_resp_int = false; // Ensure we are sending a float response
+    break;
 
+  case AV_NET_DPR_P_NCO:
+    Serial.println("Received AV_NET_DPR_P_COPV command");
+    resp_val_float = memory.copv_press;
+    is_resp_int = false; // Ensure we are sending a float response
+    break;
+
+  case AV_NET_DPR_T_NCO:
+    Serial.println("Received AV_NET_DPR_T_COPV command");
+    resp_val_float = memory.copv_temp;
+    is_resp_int = false; // Ensure we are sending a float response
+    break;
 
   case AV_NET_DPR_VALVES_STATE: {
       status_led(GREEN);
       Serial.println("Received AV_NET_PRB_VALVES_STATE read command");
-      bool PN_state = memory.PN_state;
-      bool VX_state = memory.VX_state;
-      bool VN_state = memory.VN_state;
 
-      uint8_t response_PN = (PN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
-      uint8_t response_VENT1 = (VX_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
-      uint8_t response_VENT2 = (VN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      uint8_t response_PN = (memory.PN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      uint8_t response_VX = (memory.VX_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      uint8_t response_VN = (memory.VN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
 
       // responseValue = 0; // Reset responseValue
-      resp_val_int = (response_VENT2 << 16) | (response_PN << 8) | response_VENT1;
+      resp_val_int = (response_VN << 16) | (response_PN << 8) | response_VX;
       is_resp_int = true;
       break;
     }

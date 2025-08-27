@@ -33,19 +33,6 @@
 // Status 
 #define LED_TIMEOUT 1000 // 1 second
 
-enum DPRfsm
-{
-    SAFE,
-    FILLING,
-    HOLD,
-    PRESSURIZATION_ETH,
-    PRESSURIZATION_LOX,
-    REGULATION,
-    SLEEP,
-    PASSIVATION,
-    ABORT
-};
-
 struct RGBColor {
     int red;
     int green;

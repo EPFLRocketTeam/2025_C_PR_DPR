@@ -4,7 +4,7 @@
 #include "PTE7300_I2C.h"
 
 typedef struct dpr_memory_t {
-    DPRfsm state;
+    DPR_FSM state;
     PTE7300_I2C my_sensor;
     int16_t value_sensor;
     bool status_led;
@@ -58,7 +58,7 @@ private:
     float read_temperature(int sensor);
 
     // =============== Controller ==============
-    float pid();
+    void pid();
     float computeFullScale();
     void regulation();
     void pressurization();
@@ -66,7 +66,7 @@ private:
     void initialize();
 
 public:
-    DPRComputer(DPRfsm);
+    DPRComputer(DPR_FSM);
     ~DPRComputer();
 
     //valve and motor control
@@ -77,12 +77,13 @@ public:
     dpr_memory_t get_memory();
 
     //setters
-    void set_state(DPRfsm new_state);
+    void set_state(DPR_FSM new_state);
 
     // FSM
     void update(int time);
 
     float filterTankPressure();
+    float filterTankTemp();
 };
 
 
