@@ -243,7 +243,6 @@ void setup() {
 
 PTE7300_I2C mySensor; // attach sensor
 int16_t DSP_T1;
-int time;
 int sleep_time = 100;
 
 void loop() {

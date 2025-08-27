@@ -27,7 +27,7 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.dutyTime = 0.0;
     memory_controller.startTime = 0;
     memory_controller.lastTime = 0;
-    memory_controller.controlPeriod = 0;
+    memory_controller.controlPeriod = 100;
 }
 
 DPRComputer::~DPRComputer() {}
@@ -88,13 +88,13 @@ float DPRComputer::read_pressure(int sensor)
     case TANK2:  // TANK2
     case TANK3:
         DSP_S = my_sensor.readDSP_S();
-        press = DSP_S * 5.0 / 1600 + 50;
+        press = ((DSP_S - (-16000.0)) * (100.0) / (16000.0 - (-16000.0)));
     break;
 
     case COPV:
         // read 400 bar
         DSP_S = my_sensor.readDSP_S();
-        press = DSP_S * 5.0 / 1600 + 50; // Change formula for 400 bar
+        press = ((DSP_S - (-16000.0)) * (400.0) / (16000.0 - (-16000.0))); // Change formula for 400 bar
         break;
     
     default:

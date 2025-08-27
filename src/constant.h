@@ -3,7 +3,7 @@
 #include "vector"
 
 #define DEBUG
-// #define DPR_LOX
+#define DPR_LOX
 
 // PINs attribition on Teensy
 // #define DPR         7
@@ -11,8 +11,8 @@
 //#define VENT2       9          //I-GP
 #define VENT_SPARE  10
 
-#define VX 10 //spare
-#define VN 8
+#define VX 8 //spare
+#define VN 9
 #define PN 7 // DPR
 
 
