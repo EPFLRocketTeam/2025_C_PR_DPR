@@ -3,6 +3,7 @@
 #include "vector"
 
 #define DEBUG
+// #define DPR_LOX
 
 // PINs attribition on Teensy
 // #define DPR         7
@@ -22,13 +23,25 @@
 #define BUZZER      7
 
 // Adresses I2C
-#define SLAVE_ADDR  0x0C
 #define MUX_ADDR    0x70 // 0xE0
 #define SENS_ADDR   0x6C        //or 0x6C
 #define TANK1       0x01        // channel 0
 #define TANK2       0x02        // channel 1
 #define TANK3       0x08        // channel 2
 #define COPV        0x04        // channel 3
+
+enum DPR_FSM
+{
+    SAFE,
+    HOLD,
+    MANUAL,
+    INITIALIZE_PRESSURIZATION,
+    PRESSURIZATION,
+    INITIALIZE_REGULATION,
+    REGULATION,
+    PASSIVATION,
+    ABORT_DPR
+};
 
 // Status 
 #define LED_TIMEOUT 1000 // 1 second
