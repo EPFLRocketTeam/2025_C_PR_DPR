@@ -100,7 +100,7 @@ float DPRComputer::read_pressure(int sensor)
     default:
         break;
     }
-   
+
 
     return press;
 }
@@ -150,6 +150,16 @@ void DPRComputer::update(int time)
         case PRESSURIZATION:
             pressurization();
             actuate();
+
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(RED);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
             break;
 
         case INITIALIZE_REGULATION:
@@ -160,6 +170,16 @@ void DPRComputer::update(int time)
         case REGULATION:
             regulation();
             actuate();
+
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(BLUE);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
             break;
 
         case SAFE:
