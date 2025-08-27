@@ -219,7 +219,11 @@ void setup() {
   digitalWrite(RESET, HIGH);
 
   // I2C with Raspberry Pi (use default Wire)
+  #ifdef DPR_LOX
   Wire1.begin(AV_NET_ADDR_DPR_LOX);       // Set as I2C slave
+  #else 
+  Wire1.begin(AV_NET_ADDR_DPR_ETH);
+  #endif
   Wire1.onReceive(receiveEvent); // Register receive handler
   Wire1.onRequest(requestEvent); // Register request handler
 
