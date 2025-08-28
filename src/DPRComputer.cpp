@@ -13,16 +13,20 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.tankPressure = 0.0;
     memory_controller.copvPressure = 0.0;
     memory_controller.initialCopvPressure = 0.0;
-    memory_controller.limitPressure = 60;
+#ifdef DPR_LOX
+    memory_controller.limitPressure = LIMIT_PRESSURE_LOX;
+#else
+    memory_controller.limitPressure = LIMIT_PRESSURE_ETH;
+#endif
     memory_controller.rampedPressure = 0.0;
     memory_controller.fullScalePressure = 1000;
     memory_controller.error = 0.0;
     memory_controller.lastError = 0.0;
     memory_controller.integral = 0.0;
     memory_controller.derivative = 0.0;
-    memory_controller.kp = 1.70;
-    memory_controller.ki = 0.3;
-    memory_controller.kd = 0.0;
+    memory_controller.kp = KP;
+    memory_controller.ki = KI;
+    memory_controller.kd = KD;
     memory_controller.dutyRatio = 0.0;
     memory_controller.dutyTime = 0.0;
     memory_controller.startTime = 0;
@@ -34,6 +38,50 @@ DPRComputer::~DPRComputer() {}
 
 // ========= valve and motor control =========
 void DPRComputer::open_valve(int valve)
+{
+    switch (valve)
+    {
+    case PN:
+        memory.PN_state = true;
+        digitalWrite(valve, HIGH);
+        break;
+    case VX:
+        memory.VX_state = true;
+        digitalWrite(valve, LOW);
+        break;
+    case VN:
+        memory.VN_state = true;
+        digitalWrite(valve, HIGH);
+        break;
+    default:
+        break;
+    }
+}
+
+void DPRComputer::close_valve(int valve)
+{
+    switch (valve)
+    {
+    case PN:
+        memory.PN_state = false;
+        digitalWrite(valve, LOW);
+        break;
+    case VX:
+        memory.VX_state = false;
+        digitalWrite(valve, HIGH);
+        break;
+    case VN:
+        memory.VN_state = false;
+        digitalWrite(valve, LOW);
+        break;
+    default:
+        break;
+    }
+}
+
+
+// ========= valve and motor control =========
+void DPRComputer::actuate_valve(int valve)
 {
     switch (valve)
     {
@@ -53,7 +101,7 @@ void DPRComputer::open_valve(int valve)
     digitalWrite(valve, HIGH);
 }
 
-void DPRComputer::close_valve(int valve)
+void DPRComputer::deactuate_valve(int valve)
 {
     switch (valve)
     {
@@ -266,6 +314,11 @@ void DPRComputer::initialize() {
     // initialize ramped pressure
     memory_controller.rampedPressure = 0.0;
 
+    // initialize pid variables
+    memory_controller.integral = 0.0;
+    memory_controller.derivative = 0.0;
+    memory_controller.error = 0.0;
+
     memory_controller.startTime = 0;
     memory_controller.lastTime = 0;
 }
@@ -301,8 +354,13 @@ void DPRComputer::pressurization() {
         pid();
         memory_controller.lastError = memory_controller.error;
         memory_controller.dutyTime = memory_controller.dutyRatio * memory_controller.controlPeriod;
+
+        if (millis() - memory_controller.startTime > 15000) {
+            memory.state = INITIALIZE_REGULATION;
+        }
     }
 }
+
 
 //==============================================================================================================
 float DPRComputer::filterTankPressure() {
@@ -381,19 +439,19 @@ void status_led(RGBColor color) {
 
 void turn_on_sequence()
 {
-  digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(LED_BUILTIN, HIGH);
 
-  status_led(BLUE);
-  delay(500);
-  status_led(GREEN);
-  delay(500);
-  status_led(RED);
-  delay(500);
-  status_led(WHITE);
-  tone(BUZZER, 440, 1000);
-  delay(1000);
-  noTone(BUZZER);
-  status_led(OFF);
+    status_led(BLUE);
+    delay(500);
+    status_led(GREEN);
+    delay(500);
+    status_led(RED);
+    delay(500);
+    status_led(WHITE);
+    tone(BUZZER, 440, 1000);
+    delay(1000);
+    noTone(BUZZER);
+    status_led(OFF);
 
-  digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
 }

@@ -69,9 +69,13 @@ public:
     DPRComputer(DPR_FSM);
     ~DPRComputer();
 
-    //valve and motor control
+    //valve and motor opening/closing
     void open_valve(int valve);
     void close_valve(int valve);
+
+    // valve actuating
+    void actuate_valve(int valve);
+    void deactuate_valve(int valve);
     
     //getters
     dpr_memory_t get_memory();

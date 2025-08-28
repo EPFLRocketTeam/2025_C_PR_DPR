@@ -3,18 +3,21 @@
 #include "vector"
 
 #define DEBUG
-#define DPR_LOX
+//#define DPR_LOX
 
-// PINs attribition on Teensy
-// #define DPR         7
-// #define VENT1       8
-//#define VENT2       9          //I-GP
-#define VENT_SPARE  10
+
+//#define VENT_SPARE  10
 
 #define VX 8 //spare
 #define VN 9
 #define PN 7 // DPR
 
+#define KP 1.7
+#define KI 0.3
+#define KD 0.025
+
+#define LIMIT_PRESSURE_LOX 49
+#define LIMIT_PRESSURE_ETH 59
 
 #define RESET       1
 #define RGB_RED     3

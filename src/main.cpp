@@ -91,34 +91,33 @@ void receiveEvent(int numBytes) {
         memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
         uint8_t valves_vx = received_buffer[0];
         uint8_t valves_pn = received_buffer[1];
-        uint8_t valves_vent2 = received_buffer[2];
-   
+        uint8_t valves_vn = received_buffer[2];
 
         if (valves_pn == AV_NET_CMD_ON) {
-          computer.open_valve(PN);
+          computer.actuate_valve(PN);
           status_led(GREEN);
         } else if (valves_pn == AV_NET_CMD_OFF) {
-          computer.close_valve(PN);
+          computer.deactuate_valve(PN);
           status_led(ORANGE);
         } else {
           status_led(RED);
         }
 
         if (valves_vx == AV_NET_CMD_ON) {
-          computer.open_valve(VX);
+          computer.actuate_valve(VX);
           status_led(GREEN);
         } else if (valves_vx == AV_NET_CMD_OFF) {
-          computer.close_valve(VX);
+          computer.deactuate_valve(VX);
           status_led(ORANGE);
         } else {
           status_led(RED);
         }
 
-        if (valves_vent2 == AV_NET_CMD_ON) {
-          computer.open_valve(VN);
+        if (valves_vn == AV_NET_CMD_ON) {
+          computer.actuate_valve(VN);
           status_led(GREEN);
-        } else if (valves_vent2 == AV_NET_CMD_OFF) {
-          computer.close_valve(VN);
+        } else if (valves_vn == AV_NET_CMD_OFF) {
+          computer.deactuate_valve(VN);
           status_led(ORANGE);
         } else {
           status_led(RED);
