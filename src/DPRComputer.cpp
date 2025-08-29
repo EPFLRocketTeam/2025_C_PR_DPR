@@ -46,7 +46,7 @@ void DPRComputer::open_valve(int valve)
         digitalWrite(valve, HIGH);
         break;
     case VX:
-        memory.VX_state = true;
+        memory.VX_state = false;
         digitalWrite(valve, LOW);
         break;
     case VN:
@@ -67,7 +67,7 @@ void DPRComputer::close_valve(int valve)
         digitalWrite(valve, LOW);
         break;
     case VX:
-        memory.VX_state = false;
+        memory.VX_state = true;
         digitalWrite(valve, HIGH);
         break;
     case VN:
