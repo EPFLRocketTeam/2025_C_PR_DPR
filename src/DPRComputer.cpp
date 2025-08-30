@@ -400,7 +400,7 @@ void DPRComputer::pid() {
     float correction = 0.0;
 
     // integral contribution
-    memory_controller.integral += memory_controller.controlPeriod * memory_controller.error;
+    memory_controller.integral += memory_controller.controlPeriod * 0.001 * memory_controller.error;
 
     // derivative contribution
     memory_controller.derivative = ((memory_controller.error - memory_controller.lastError)*1000) / memory_controller.controlPeriod;
