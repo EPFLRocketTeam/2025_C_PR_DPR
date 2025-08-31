@@ -230,21 +230,28 @@ void DPRComputer::update(int time)
             }
             break;
 
-        case INITIALIZE_PASSIVATION:
-            initialize();
-            memory.state = PASSIVATION;
-            break;
-
         case PRESSURIZATION_OFF:
             close_valve(VX);
             close_valve(PN);
             close_valve(VN);
             break;
 
+        case INITIALIZE_PASSIVATION:
+            initialize();
+            memory.state = PASSIVATION;
+            break;
+
         case PASSIVATION:
-            open_valve(VN);
-            open_valve(VX);
-            close_valve(PN);
+            if (millis() - memory_controller.startTime < 300000) {
+                open_valve(VN);
+                open_valve(VX);
+                close_valve(PN);
+            }
+            else {
+                deactuate_valve(VN);
+                deactuate_valve(VX);
+                deactuate_valve(PN);
+            }
             break;
 
         case ABORT_ON_GROUND:
@@ -369,7 +376,7 @@ void DPRComputer::pressurization() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
         if (memory_controller.rampedPressure < memory_controller.limitPressure) {
-            memory_controller.rampedPressure = (memory_controller.limitPressure / 10000)*millis() - (memory_controller.limitPressure*memory_controller.startTime)/10000;
+            memory_controller.rampedPressure = (memory_controller.limitPressure / )*millis() - (memory_controller.limitPressure*memory_controller.startTime)/10000;
         }
         else {
             memory_controller.rampedPressure = memory_controller.limitPressure;
@@ -381,10 +388,6 @@ void DPRComputer::pressurization() {
         pid();
         memory_controller.lastError = memory_controller.error;
         memory_controller.dutyTime = memory_controller.dutyRatio * memory_controller.controlPeriod;
-
-        if (millis() - memory_controller.startTime > 15000) {
-            memory.state = INITIALIZE_REGULATION;
-        }
     }
 }
 
