@@ -230,16 +230,36 @@ void DPRComputer::update(int time)
             }
             break;
 
-        case SAFE:
-            open_valve(VX);
-            close_valve(PN);
-            close_valve(VN);
+        case INITIALIZE_PASSIVATION:
+            initialize();
+            memory.state = PASSIVATION;
             break;
 
-        case HOLD:
-            close_valve(VX);
+        case PASSIVATION:
+            if (millis() - memory_controller.startTime >= DELAY_VENT_N2) {
+                open_valve(VX);
+            }
+
+        case ABORT_ON_GROUND:
+            open_valve(VX);
             close_valve(PN);
-            close_valve(VN);
+            open_valve(VN);
+
+            if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(PURPLE);
+                memory.time_led = time;
+                memory.status_led = true;
+            } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
+                status_led(OFF);
+                memory.time_led = time;
+                memory.status_led = false;
+            }
+            break;
+
+        case ABORT_IN_FLIGHT:
+            open_valve(VX);
+            close_valve(PN);
+            open_valve(VN);
 
             if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
                 status_led(ORANGE);
@@ -304,7 +324,7 @@ void DPRComputer::update(int time)
 //==============================================================================================================
 void DPRComputer::initialize() {
     // Valves in regulation state
-    open_valve(VX);
+    close_valve(VX);
     close_valve(VN);
     close_valve(PN);
 
