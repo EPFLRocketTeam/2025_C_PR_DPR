@@ -134,6 +134,13 @@ void receiveEvent(int numBytes) {
         break;
       }
 
+      case AV_NET_DPR_PASSIVATE:
+        Serial.println("Received AV_NET_DPR_PASSIVATE command");
+        status_led(TEAL);
+        computer.set_state(INITIALIZE_PASSIVATION);
+        break;
+      
+
       default:
         Serial.println("Unknown command received");
         break;
