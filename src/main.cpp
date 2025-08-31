@@ -202,7 +202,11 @@ void requestEvent() {
 
       uint8_t response_PN = (memory.PN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
       uint8_t response_VX = (memory.VX_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      #ifdef DPR_LOX
+      uint8_t response_VN = 0;
+      #else 
       uint8_t response_VN = (memory.VN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
+      #endif
 
       // responseValue = 0; // Reset responseValue
       resp_val_int = (response_VN << 16) | (response_PN << 8) | response_VX;

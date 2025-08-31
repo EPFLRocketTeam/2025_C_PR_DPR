@@ -13,6 +13,9 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.tankPressure = 0.0;
     memory_controller.copvPressure = 0.0;
     memory_controller.initialCopvPressure = 0.0;
+    memory.PN_state = false;
+    memory.VX_state = false;
+    memory.VN_state = false;
 #ifdef DPR_LOX
     memory_controller.limitPressure = LIMIT_PRESSURE_LOX;
 #else
