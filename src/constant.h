@@ -26,6 +26,8 @@
 #define LIMIT_PRESSURE_ETH 59
 #endif
 
+#define DELAY_VENT_N2 20
+
 #define RESET       1
 #define RGB_RED     3
 #define RGB_GREEN   2
@@ -42,15 +44,15 @@
 
 enum DPR_FSM
 {
-    SAFE,
-    HOLD,
     MANUAL,
     INITIALIZE_PRESSURIZATION,
     PRESSURIZATION,
     INITIALIZE_REGULATION,
     REGULATION,
+    INITIALIZE_PASSIVATION,
     PASSIVATION,
-    ABORT_DPR
+    ABORT_IN_FLIGHT,
+    ABORT_ON_GROUND
 };
 
 // Status 

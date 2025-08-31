@@ -7,7 +7,7 @@
 // // Define I2C slave address for Raspberry Pi
 // #define SLAVE_ADDR 0x08
 
-DPRComputer computer(SAFE);
+DPRComputer computer(MANUAL);
 
 // Variables for communication
 volatile uint8_t received_buffer[4];
@@ -72,55 +72,64 @@ void receiveEvent(int numBytes) {
           status_led(GREEN);
           Serial.println("Received AV_NET_DPR_PRESSURIZE command");
           dpr_memory_t memory = computer.get_memory();
-          if (memory.state == HOLD) {
+          if (memory.state == MANUAL) {
               computer.set_state(INITIALIZE_PRESSURIZATION);
           }
           break;
         }
 
-      case AV_NET_DPR_ABORT:
+      case AV_NET_DPR_ABORT: {
+        uint8_t cmd_abort = received_buffer[0];
+        if (cmd_abort == AV_NET_CMD_ON) {
+          computer.set_state(ABORT_IN_FLIGHT);
+        }
+        else {
+          computer.set_state(ABORT_ON_GROUND);
+        }
         Serial.println("Received AV_NET_DPR_ABORT command");
-        computer.set_state(HOLD);
         break;
+      }
 
       case AV_NET_DPR_VALVES_STATE: {
         status_led(PURPLE);
-        computer.set_state(MANUAL);
-        Serial.println("Received AV_NET_DPR_VALVES_STATE command");
-        uint32_t res;
-        memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
-        uint8_t valves_vx = received_buffer[0];
-        uint8_t valves_pn = received_buffer[1];
-        uint8_t valves_vn = received_buffer[2];
+        if (computer.get_memory().state == ABORT_ON_GROUND || computer.get_memory().state == MANUAL) {
+          computer.set_state(MANUAL);
+          Serial.println("Received AV_NET_DPR_VALVES_STATE command");
+          uint32_t res;
+          memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
+          uint8_t valves_vx = received_buffer[0];
+          uint8_t valves_pn = received_buffer[1];
+          uint8_t valves_vn = received_buffer[2];
 
-        if (valves_pn == AV_NET_CMD_ON) {
-          computer.actuate_valve(PN);
-          status_led(GREEN);
-        } else if (valves_pn == AV_NET_CMD_OFF) {
-          computer.deactuate_valve(PN);
-          status_led(ORANGE);
-        } else {
-          status_led(RED);
-        }
+          if (valves_pn == AV_NET_CMD_ON) {
+            computer.actuate_valve(PN);
+            status_led(GREEN);
+          } else if (valves_pn == AV_NET_CMD_OFF) {
+            computer.deactuate_valve(PN);
+            status_led(ORANGE);
+          } else {
+            status_led(RED);
+          }
 
-        if (valves_vx == AV_NET_CMD_ON) {
-          computer.actuate_valve(VX);
-          status_led(GREEN);
-        } else if (valves_vx == AV_NET_CMD_OFF) {
-          computer.deactuate_valve(VX);
-          status_led(ORANGE);
-        } else {
-          status_led(RED);
-        }
+          if (valves_vx == AV_NET_CMD_ON) {
+            computer.actuate_valve(VX);
+            status_led(GREEN);
+          } else if (valves_vx == AV_NET_CMD_OFF) {
+            computer.deactuate_valve(VX);
+            status_led(ORANGE);
+          } else {
+            status_led(RED);
+          }
 
-        if (valves_vn == AV_NET_CMD_ON) {
-          computer.actuate_valve(VN);
-          status_led(GREEN);
-        } else if (valves_vn == AV_NET_CMD_OFF) {
-          computer.deactuate_valve(VN);
-          status_led(ORANGE);
-        } else {
-          status_led(RED);
+          if (valves_vn == AV_NET_CMD_ON) {
+            computer.actuate_valve(VN);
+            status_led(GREEN);
+          } else if (valves_vn == AV_NET_CMD_OFF) {
+            computer.deactuate_valve(VN);
+            status_led(ORANGE);
+          } else {
+            status_led(RED);
+          }
         }
         break;
       }
@@ -213,6 +222,11 @@ void setup() {
   pinMode(RGB_GREEN, OUTPUT);
   pinMode(RGB_BLUE, OUTPUT);
   pinMode(BUZZER, OUTPUT);
+
+  // initialize valves in normal state
+  digitalWrite(VX, LOW);
+  digitalWrite(PN, LOW);
+  digitalWrite(VN, LOW);
 
   // Activate MUX
   digitalWrite(RESET, HIGH);
