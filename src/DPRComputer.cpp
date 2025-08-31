@@ -238,10 +238,17 @@ void DPRComputer::update(int time)
             memory.state = PASSIVATION;
             break;
 
+        case PRESSURIZATION_OFF:
+            close_valve(VX);
+            close_valve(PN);
+            close_valve(VN);
+            break;
+
         case PASSIVATION:
-            if (millis() - memory_controller.startTime >= DELAY_VENT_N2) {
-                open_valve(VX);
-            }
+            open_valve(VN);
+            open_valve(VX);
+            close_valve(PN);
+            break;
 
         case ABORT_ON_GROUND:
             open_valve(VX);
