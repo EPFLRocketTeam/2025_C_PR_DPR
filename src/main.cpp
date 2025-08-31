@@ -70,11 +70,17 @@ void receiveEvent(int numBytes) {
 
       case AV_NET_DPR_PRESSURIZE: {
           status_led(GREEN);
-          Serial.println("Received AV_NET_DPR_PRESSURIZE command");
-          dpr_memory_t memory = computer.get_memory();
-          if (memory.state == MANUAL) {
+          uint8_t cmd_pressurize = received_buffer[0];
+          if (cmd_pressurize == AV_NET_CMD_ON) {
+            dpr_memory_t memory = computer.get_memory();
+            if (memory.state == MANUAL) {
               computer.set_state(INITIALIZE_PRESSURIZATION);
+            }
           }
+          else {
+            computer.set_state(PRESSURIZATION_OFF);
+          }
+          Serial.println("Received AV_NET_DPR_PRESSURIZE command");
           break;
         }
 
