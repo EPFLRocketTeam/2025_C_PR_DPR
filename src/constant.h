@@ -3,7 +3,9 @@
 #include "vector"
 
 #define DEBUG
-//#define DPR_LOX
+#define DPR_LOX
+
+#define DRY_RUN
 
 
 //#define VENT_SPARE  10
@@ -16,8 +18,13 @@
 #define KI 0.3
 #define KD 0.025
 
+#ifdef DRY_RUN
+#define LIMIT_PRESSURE_LOX 3
+#define LIMIT_PRESSURE_ETH 3
+#else
 #define LIMIT_PRESSURE_LOX 49
 #define LIMIT_PRESSURE_ETH 59
+#endif
 
 #define RESET       1
 #define RGB_RED     3

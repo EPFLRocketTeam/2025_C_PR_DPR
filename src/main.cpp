@@ -7,7 +7,7 @@
 // // Define I2C slave address for Raspberry Pi
 // #define SLAVE_ADDR 0x08
 
-DPRComputer computer(HOLD);
+DPRComputer computer(SAFE);
 
 // Variables for communication
 volatile uint8_t received_buffer[4];
