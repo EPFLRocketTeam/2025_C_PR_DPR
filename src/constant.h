@@ -26,7 +26,7 @@
 #define LIMIT_PRESSURE_ETH 18.79
 #endif
 
-#define DELAY_VENT_N2 20
+#define RAMP_DELAY 5000
 
 #define RESET       1
 #define RGB_RED     3

@@ -379,10 +379,10 @@ void DPRComputer::pressurization() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
         if (memory_controller.rampedPressure < memory_controller.limitPressure) {
-            memory_controller.rampedPressure = (memory_controller.limitPressure / )*millis() - (memory_controller.limitPressure*memory_controller.startTime)/10000;
+            memory_controller.rampedPressure = (memory_controller.limitPressure / RAMP_DELAY)*millis() - (memory_controller.limitPressure*memory_controller.startTime)/10000;
         }
         else {
-            memory_controller.rampedPressure = memory_controller.limitPressure;
+            memory.state = INITIALIZE_REGULATION;
         }
         memory_controller.tankPressure = filterTankPressure();
         memory_controller.copvPressure = memory.copv_press;
