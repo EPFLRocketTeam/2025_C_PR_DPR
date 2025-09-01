@@ -21,6 +21,7 @@ typedef struct dpr_memory_t {
     float tank3_press;
     float copv_temp;
     float copv_press;
+    int max_time_passivate;
 } dpr_memory_t;
 
 typedef struct dpr_memory_controller_t {

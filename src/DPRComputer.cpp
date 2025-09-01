@@ -19,10 +19,11 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory.PN_state = false;
     memory.VX_state = false;
     memory.VN_state = false;
+    memory.max_time_passivate = 0;
 #ifdef DPR_LOX
-    memory_controller.limitPressure = LIMIT_PRESSURE_LOX;
+    memory_controller.limitPressure = PRESSURIZATION_OX_SET_PRESSURE;
 #else
-    memory_controller.limitPressure = LIMIT_PRESSURE_ETH;
+    memory_controller.limitPressure = PRESSURIZATION_FUEL_SET_PRESSURE;
 #endif
     memory_controller.rampedPressure = 0.0;
     memory_controller.fullScalePressure = 1000;
@@ -238,9 +239,15 @@ void DPRComputer::update(int time)
             break;
 
         case PRESSURIZATION_OFF:
+            if (memory.max_time_passivate == 0) {
+                memory.max_time_passivate = millis();
+            }
             close_valve(VX);
             close_valve(PN);
             close_valve(VN);
+            if (millis() - memory.max_time_passivate >= PASSIVATION_DELAY_NO_COM_DPR) {
+                memory.state = INITIALIZE_PASSIVATION;
+            }
             break;
 
         case INITIALIZE_PASSIVATION:
@@ -249,7 +256,7 @@ void DPRComputer::update(int time)
             break;
 
         case PASSIVATION:
-            if (millis() - memory_controller.startTime < 300000) {
+            if (millis() - memory_controller.startTime < PASSIVATION_COPV_DURATION) {
                 open_valve(VN);
                 open_valve(VX);
                 close_valve(PN);
@@ -264,7 +271,7 @@ void DPRComputer::update(int time)
         case ABORT_ON_GROUND:
             open_valve(VX);
             close_valve(PN);
-            open_valve(VN);
+            close_valve(VN);
 
             if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
                 status_led(PURPLE);

@@ -77,7 +77,7 @@ void receiveEvent(int numBytes) {
               computer.set_state(INITIALIZE_PRESSURIZATION);
             }
           }
-          else {
+          else if (cmd_pressurize == AV_NET_CMD_OFF) {
             computer.set_state(PRESSURIZATION_OFF);
           }
           Serial.println("Received AV_NET_DPR_PRESSURIZE command");
@@ -89,7 +89,7 @@ void receiveEvent(int numBytes) {
         if (cmd_abort == AV_NET_CMD_ON) {
           computer.set_state(ABORT_IN_FLIGHT);
         }
-        else {
+        else if (cmd_abort == AV_NET_CMD_OFF) {
           computer.set_state(ABORT_ON_GROUND);
         }
         Serial.println("Received AV_NET_DPR_ABORT command");
