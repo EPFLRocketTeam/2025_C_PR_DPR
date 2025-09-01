@@ -14,9 +14,11 @@
 #define VN 9
 #define PN 7 // DPR
 
+// controller constants
 #define KP 1.7
 #define KI 0.3
 #define KD 0.025
+#define CONTROL_PERIOD 100
 
 #ifdef DRY_RUN
 #define LIMIT_PRESSURE_LOX 3

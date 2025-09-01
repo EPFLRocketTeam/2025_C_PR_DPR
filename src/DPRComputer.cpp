@@ -13,6 +13,9 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.tankPressure = 0.0;
     memory_controller.copvPressure = 0.0;
     memory_controller.initialCopvPressure = 0.0;
+    memory_controller.tank1_offset = 0.0;
+    memory_controller.tank1_offset = 0.0;
+    memory_controller.tank1_offset = 0.0;
     memory.PN_state = false;
     memory.VX_state = false;
     memory.VN_state = false;
@@ -34,7 +37,7 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.dutyTime = 0.0;
     memory_controller.startTime = 0;
     memory_controller.lastTime = 0;
-    memory_controller.controlPeriod = 100;
+    memory_controller.controlPeriod = CONTROL_PERIOD;
 }
 
 DPRComputer::~DPRComputer() {}
@@ -194,6 +197,7 @@ void DPRComputer::update(int time)
     switch (memory.state)
     {
         case INITIALIZE_PRESSURIZATION:
+            set_offset();
             initialize();
             memory.state = PRESSURIZATION;
             break;
@@ -338,6 +342,12 @@ void DPRComputer::update(int time)
 
 }
 
+void DPRComputer::set_offset() {
+    memory_controller.tank1_offset = memory.tank1_press;
+    memory_controller.tank2_offset = memory.tank2_press;
+    memory_controller.tank3_offset = memory.tank3_press;
+}
+
 //==============================================================================================================
 void DPRComputer::initialize() {
     // Valves in regulation state
@@ -364,7 +374,7 @@ void DPRComputer::initialize() {
 void DPRComputer::regulation() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
-        memory_controller.tankPressure = filterTankPressure();
+        memory_controller.tankPressure = filterTankPressure(true);
         memory_controller.copvPressure = memory.copv_press;
         memory_controller.error = memory_controller.limitPressure - memory_controller.tankPressure;
         memory_controller.fullScalePressure = computeFullScale();
@@ -379,12 +389,12 @@ void DPRComputer::pressurization() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
         if (memory_controller.rampedPressure < memory_controller.limitPressure) {
-            memory_controller.rampedPressure = (memory_controller.limitPressure / RAMP_DELAY)*millis() - (memory_controller.limitPressure*memory_controller.startTime)/10000;
+            memory_controller.rampedPressure = (memory_controller.limitPressure / RAMP_DELAY)*millis() - (memory_controller.limitPressure*memory_controller.startTime)/RAMP_DELAY;
         }
         else {
             memory.state = INITIALIZE_REGULATION;
         }
-        memory_controller.tankPressure = filterTankPressure();
+        memory_controller.tankPressure = filterTankPressure(true);
         memory_controller.copvPressure = memory.copv_press;
         memory_controller.error = memory_controller.rampedPressure - memory_controller.tankPressure;
         memory_controller.fullScalePressure = computeFullScale();
@@ -396,10 +406,21 @@ void DPRComputer::pressurization() {
 
 
 //==============================================================================================================
-float DPRComputer::filterTankPressure() {
-    float pressure1 = memory.tank1_press;
-    float pressure2 = memory.tank2_press;
-    float pressure3 = memory.tank3_press;
+float DPRComputer::filterTankPressure(bool controller) {
+    float pressure1 = 0.0;
+    float pressure2 = 0.0;
+    float pressure3 = 0.0;
+
+    if (controller) {
+        pressure1 = memory.tank1_press - memory_controller.tank1_offset;
+        pressure2 = memory.tank2_press - memory_controller.tank2_offset;
+        pressure3 = memory.tank3_press - memory_controller.tank3_offset;
+    }
+    else {
+        pressure1 = memory.tank1_press;
+        pressure2 = memory.tank2_press;
+        pressure3 = memory.tank3_press;
+    }
 
     if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
         return 0.5*(pressure2 + pressure3);

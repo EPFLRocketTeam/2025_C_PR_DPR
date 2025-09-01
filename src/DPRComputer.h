@@ -30,6 +30,9 @@ typedef struct dpr_memory_controller_t {
     float limitPressure;
     float rampedPressure;
     float fullScalePressure;
+    float tank1_offset;
+    float tank2_offset;
+    float tank3_offset;
     float error;
     float lastError;
     float integral;
@@ -64,6 +67,7 @@ private:
     void pressurization();
     void actuate();
     void initialize();
+    void set_offset();
 
 public:
     DPRComputer(DPR_FSM);
@@ -86,7 +90,7 @@ public:
     // FSM
     void update(int time);
 
-    float filterTankPressure();
+    float filterTankPressure(bool controller);
     float filterTankTemp();
 };
 
