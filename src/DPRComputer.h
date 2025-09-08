@@ -74,6 +74,8 @@ public:
     DPRComputer(DPR_FSM);
     ~DPRComputer();
 
+    void reset_dpr();
+
     //valve and motor opening/closing
     void open_valve(int valve);
     void close_valve(int valve);

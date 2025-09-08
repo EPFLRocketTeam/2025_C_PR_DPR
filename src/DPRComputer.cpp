@@ -43,6 +43,41 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
 
 DPRComputer::~DPRComputer() {}
 
+void DPRComputer::reset_dpr() {
+    memory.state = MANUAL;
+    memory.status_led = false;
+    memory.time_led = 0;
+    memory_controller.tankPressure = 0.0;
+    memory_controller.copvPressure = 0.0;
+    memory_controller.initialCopvPressure = 0.0;
+    memory_controller.tank1_offset = 0.0;
+    memory_controller.tank1_offset = 0.0;
+    memory_controller.tank1_offset = 0.0;
+    memory.PN_state = false;
+    memory.VX_state = false;
+    memory.VN_state = false;
+    memory.max_time_passivate = 0;
+#ifdef DPR_LOX
+    memory_controller.limitPressure = PRESSURIZATION_OX_SET_PRESSURE;
+#else
+    memory_controller.limitPressure = PRESSURIZATION_FUEL_SET_PRESSURE;
+#endif
+    memory_controller.rampedPressure = 0.0;
+    memory_controller.fullScalePressure = 1000;
+    memory_controller.error = 0.0;
+    memory_controller.lastError = 0.0;
+    memory_controller.integral = 0.0;
+    memory_controller.derivative = 0.0;
+    memory_controller.kp = KP;
+    memory_controller.ki = KI;
+    memory_controller.kd = KD;
+    memory_controller.dutyRatio = 0.0;
+    memory_controller.dutyTime = 0.0;
+    memory_controller.startTime = 0;
+    memory_controller.lastTime = 0;
+    memory_controller.controlPeriod = CONTROL_PERIOD;
+}
+
 // ========= valve and motor control =========
 void DPRComputer::open_valve(int valve)
 {
@@ -251,6 +286,7 @@ void DPRComputer::update(int time)
             break;
 
         case INITIALIZE_PASSIVATION:
+            memory.max_time_passivate = 0;
             initialize();
             memory.state = PASSIVATION;
             break;
@@ -269,6 +305,7 @@ void DPRComputer::update(int time)
             break;
 
         case ABORT_ON_GROUND:
+            memory.max_time_passivate = 0;
             open_valve(VX);
             close_valve(PN);
             close_valve(VN);
@@ -285,6 +322,7 @@ void DPRComputer::update(int time)
             break;
 
         case ABORT_IN_FLIGHT:
+            memory.max_time_passivate = 0;
             open_valve(VX);
             close_valve(PN);
             open_valve(VN);
@@ -373,7 +411,7 @@ void DPRComputer::initialize() {
     memory_controller.derivative = 0.0;
     memory_controller.error = 0.0;
 
-    memory_controller.startTime = 0;
+    memory_controller.startTime = millis();
     memory_controller.lastTime = 0;
 }
 

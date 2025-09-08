@@ -70,15 +70,17 @@ void receiveEvent(int numBytes) {
 
       case AV_NET_DPR_PRESSURIZE: {
           status_led(GREEN);
+          dpr_memory_t memory = computer.get_memory();
           uint8_t cmd_pressurize = received_buffer[0];
           if (cmd_pressurize == AV_NET_CMD_ON) {
-            dpr_memory_t memory = computer.get_memory();
             if (memory.state == MANUAL) {
               computer.set_state(INITIALIZE_PRESSURIZATION);
             }
           }
           else if (cmd_pressurize == AV_NET_CMD_OFF) {
-            computer.set_state(PRESSURIZATION_OFF);
+            if (memory.state == REGULATION) {
+              computer.set_state(PRESSURIZATION_OFF);
+            }
           }
           Serial.println("Received AV_NET_DPR_PRESSURIZE command");
           break;
@@ -112,7 +114,7 @@ void receiveEvent(int numBytes) {
             status_led(GREEN);
           } else if (valves_pn == AV_NET_CMD_OFF) {
             computer.deactuate_valve(PN);
-            status_led(ORANGE);
+            // status_led(ORANGE);
           } else {
             status_led(RED);
           }
@@ -122,7 +124,7 @@ void receiveEvent(int numBytes) {
             status_led(GREEN);
           } else if (valves_vx == AV_NET_CMD_OFF) {
             computer.deactuate_valve(VX);
-            status_led(ORANGE);
+            // status_led(ORANGE);
           } else {
             status_led(RED);
           }
@@ -132,19 +134,28 @@ void receiveEvent(int numBytes) {
             status_led(GREEN);
           } else if (valves_vn == AV_NET_CMD_OFF) {
             computer.deactuate_valve(VN);
-            status_led(ORANGE);
+            // status_led(ORANGE);
           } else {
             status_led(RED);
           }
         }
         break;
       }
-      case AV_NET_DPR_PASSIVATE:
+      case AV_NET_DPR_PASSIVATE: {
         Serial.println("Received AV_NET_DPR_PASSIVATE command");
         status_led(TEAL);
-        computer.set_state(INITIALIZE_PASSIVATION);
+        dpr_memory_t memory = computer.get_memory();
+        if (memory.state == PRESSURIZATION_OFF) {
+          computer.set_state(INITIALIZE_PASSIVATION);
+        }
+      }
         break;
 
+      case AV_NET_DPR_RESET :
+        Serial.println("Received AV_NET_DPR_RESET command");
+        // status_led(TEAL);
+        computer.reset_dpr();
+        break;
 
       default:
         Serial.println("Unknown command received");
@@ -220,8 +231,12 @@ void requestEvent() {
 
   if (is_resp_int) {
     Wire1.write((uint8_t*)&resp_val_int, AV_NET_XFER_SIZE);
+    Serial.print("Sent int response: ");
+    Serial.println(resp_val_int);
   } else {
     Wire1.write((uint8_t*)&resp_val_float, AV_NET_XFER_SIZE);
+    Serial.print("Sent float response: ");
+    Serial.println(resp_val_float);
   }
   Wire1.flush(); // Ensure the data is sent immediately
 }
