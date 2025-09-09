@@ -5,6 +5,7 @@
 
 #define TEST_WITHOUT_PRESSURE
 
+//======================================================================================================================
 DPRComputer::DPRComputer(DPR_FSM init_state)
 {
     memory.state = init_state;
@@ -41,8 +42,10 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.controlPeriod = CONTROL_PERIOD;
 }
 
+//======================================================================================================================
 DPRComputer::~DPRComputer() {}
 
+//======================================================================================================================
 void DPRComputer::reset_dpr() {
     memory.state = MANUAL;
     memory.status_led = false;
@@ -79,6 +82,7 @@ void DPRComputer::reset_dpr() {
 }
 
 // ========= valve and motor control =========
+//======================================================================================================================
 void DPRComputer::open_valve(int valve)
 {
     switch (valve)
@@ -100,6 +104,7 @@ void DPRComputer::open_valve(int valve)
     }
 }
 
+//======================================================================================================================
 void DPRComputer::close_valve(int valve)
 {
     switch (valve)
@@ -123,6 +128,7 @@ void DPRComputer::close_valve(int valve)
 
 
 // ========= valve and motor control =========
+//======================================================================================================================
 void DPRComputer::actuate_valve(int valve)
 {
     switch (valve)
@@ -143,6 +149,7 @@ void DPRComputer::actuate_valve(int valve)
     digitalWrite(valve, HIGH);
 }
 
+//======================================================================================================================
 void DPRComputer::deactuate_valve(int valve)
 {
     switch (valve)
@@ -165,6 +172,7 @@ void DPRComputer::deactuate_valve(int valve)
 
 
 // ========= sensor reading =========
+//======================================================================================================================
 float DPRComputer::read_pressure(int sensor)
 {
     int DSP_S = 0;
@@ -191,11 +199,10 @@ float DPRComputer::read_pressure(int sensor)
         break;
     }
 
-
     return press;
 }
 
-
+//======================================================================================================================
 float DPRComputer::read_temperature(int sensor)
 {
     //read temperature
@@ -211,20 +218,24 @@ float DPRComputer::read_temperature(int sensor)
 
 
 // ========= getter =========
+//======================================================================================================================
 dpr_memory_t DPRComputer::get_memory() { return memory; }
 
 // ========= setter =========
+//======================================================================================================================
 void DPRComputer::set_state(DPR_FSM new_state) { memory.state = new_state; }
 
-
+//======================================================================================================================
 bool muxSelect(uint8_t ch) {
     Wire.beginTransmission(MUX_ADDR);
     Wire.write(ch);
     return Wire.endTransmission() == 0; // true if ACKed
 }
 
-
 // ========== FSM ===========
+//======================================================================================================================
+//======================================================================================================================
+//======================================================================================================================
 void DPRComputer::update(int time)
 {
     // Update the state machine
@@ -354,14 +365,21 @@ void DPRComputer::update(int time)
             break;
     }
 
-    memory.tank1_temp = read_temperature(TANK1);
-    memory.tank2_temp = read_temperature(TANK2);
-    memory.tank3_temp = read_temperature(TANK3);
-    memory.copv_temp = read_temperature(COPV);
-    memory.tank1_press = read_pressure(TANK1);
-    memory.tank2_press = read_pressure(TANK2);
-    memory.tank3_press = read_pressure(TANK3);
-    memory.copv_press = read_pressure(COPV);
+    #ifdef PRB_DPR
+        memory.tank1_temp = read_temperature(TANK1);
+        memory.copv_temp = read_temperature(COPV);
+        memory.tank1_press = read_pressure(TANK1);
+        memory.copv_press = read_pressure(COPV);
+    #else
+        memory.tank1_temp = read_temperature(TANK1);
+        memory.tank2_temp = read_temperature(TANK2);
+        memory.tank3_temp = read_temperature(TANK3);
+        memory.copv_temp = read_temperature(COPV);
+        memory.tank1_press = read_pressure(TANK1);
+        memory.tank2_press = read_pressure(TANK2);
+        memory.tank3_press = read_pressure(TANK3);
+        memory.copv_press = read_pressure(COPV);
+    #endif
 
     #ifdef DEBUG
     if (time - memory.time_msg >= LED_TIMEOUT) {
@@ -387,13 +405,20 @@ void DPRComputer::update(int time)
 
 }
 
-void DPRComputer::set_offset() {
-    memory_controller.tank1_offset = memory.tank1_press;
-    memory_controller.tank2_offset = memory.tank2_press;
-    memory_controller.tank3_offset = memory.tank3_press;
-}
+//======================================================================================================================
+#ifdef PRB_DPR
+    void DPRComputer::set_offset() {
+        memory_controller.tank1_offset = memory.tank1_press;
+    }
+#else
+    void DPRComputer::set_offset() {
+        memory_controller.tank1_offset = memory.tank1_press;
+        memory_controller.tank2_offset = memory.tank2_press;
+        memory_controller.tank3_offset = memory.tank3_press;
+    }
+#endif
 
-//==============================================================================================================
+//======================================================================================================================
 void DPRComputer::initialize() {
     // Valves in regulation state
     close_valve(VX);
@@ -415,7 +440,7 @@ void DPRComputer::initialize() {
     memory_controller.lastTime = 0;
 }
 
-//==============================================================================================================
+//======================================================================================================================
 void DPRComputer::regulation() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
@@ -429,7 +454,7 @@ void DPRComputer::regulation() {
     }
 }
 
-//==============================================================================================================
+//======================================================================================================================
 void DPRComputer::pressurization() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
@@ -449,52 +474,72 @@ void DPRComputer::pressurization() {
     }
 }
 
-
-//==============================================================================================================
+//======================================================================================================================
+#ifdef PRB_DPR
 float DPRComputer::filterTankPressure(bool controller) {
-    float pressure1 = 0.0;
-    float pressure2 = 0.0;
-    float pressure3 = 0.0;
-
     if (controller) {
-        pressure1 = memory.tank1_press - memory_controller.tank1_offset;
-        pressure2 = memory.tank2_press - memory_controller.tank2_offset;
-        pressure3 = memory.tank3_press - memory_controller.tank3_offset;
+        return memory.tank1_press - memory_controller.tank1_offset;
     }
     else {
-        pressure1 = memory.tank1_press;
-        pressure2 = memory.tank2_press;
-        pressure3 = memory.tank3_press;
+        return memory.tank1_press;
     }
-
-    if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
-        return 0.5*(pressure2 + pressure3);
-    }
-    else if ((abs(pressure2 - pressure1) > abs(pressure1 - pressure3)) && (abs(pressure2 - pressure3) > abs(pressure1 - pressure3))) {
-        return 0.5*(pressure1 + pressure3);
-    }
-    else return 0.5*(pressure1 + pressure2);
 }
+#else
+    float DPRComputer::filterTankPressure(bool controller) {
+        float pressure1 = 0.0;
+        float pressure2 = 0.0;
+        float pressure3 = 0.0;
 
-float DPRComputer::filterTankTemp() {
-    float temp1 = memory.tank1_temp;
-    float temp2 = memory.tank2_temp;
-    float temp3 = memory.tank3_temp;
+        if (controller) {
+            pressure1 = memory.tank1_press - memory_controller.tank1_offset;
+            pressure2 = memory.tank2_press - memory_controller.tank2_offset;
+            pressure3 = memory.tank3_press - memory_controller.tank3_offset;
+        }
+        else {
+            pressure1 = memory.tank1_press;
+            pressure2 = memory.tank2_press;
+            pressure3 = memory.tank3_press;
+        }
 
-    if ((abs(temp1 - temp2) > abs(temp2 - temp3)) && (abs(temp1 - temp3) > abs(temp2 - temp3))) {
-        return 0.5*(temp2 + temp3);
+        if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
+            return 0.5*(pressure2 + pressure3);
+        }
+        else if ((abs(pressure2 - pressure1) > abs(pressure1 - pressure3)) && (abs(pressure2 - pressure3) > abs(pressure1 - pressure3))) {
+            return 0.5*(pressure1 + pressure3);
+        }
+        else return 0.5*(pressure1 + pressure2);
     }
-    else if ((abs(temp2 - temp1) > abs(temp1 - temp3)) && (abs(temp2 - temp3) > abs(temp1 - temp3))) {
-        return 0.5*(temp1 + temp3);
-    }
-    else return 0.5*(temp1 + temp2);
-}
+#endif
 
+
+//======================================================================================================================
+#ifdef PRB_DPR
+    float DPRComputer::filterTankTemp() {
+        return memory.tank1_temp;
+    }
+#else
+    float DPRComputer::filterTankTemp() {
+        float temp1 = memory.tank1_temp;
+        float temp2 = memory.tank2_temp;
+        float temp3 = memory.tank3_temp;
+
+        if ((abs(temp1 - temp2) > abs(temp2 - temp3)) && (abs(temp1 - temp3) > abs(temp2 - temp3))) {
+            return 0.5*(temp2 + temp3);
+        }
+        else if ((abs(temp2 - temp1) > abs(temp1 - temp3)) && (abs(temp2 - temp3) > abs(temp1 - temp3))) {
+            return 0.5*(temp1 + temp3);
+        }
+        else return 0.5*(temp1 + temp2);
+    }
+#endif
+
+
+//======================================================================================================================
 float DPRComputer::computeFullScale() {
     return (memory_controller.limitPressure+(memory_controller.copvPressure-memory_controller.initialCopvPressure)*(memory_controller.limitPressure/(memory_controller.initialCopvPressure-memory_controller.limitPressure)));
 }
 
-//==============================================================================================================
+//======================================================================================================================
 void DPRComputer::pid() {
     float correction = 0.0;
 
@@ -519,7 +564,7 @@ void DPRComputer::pid() {
     }
 }
 
-//==============================================================================================================
+//======================================================================================================================
 void DPRComputer::actuate() {
     if (millis() - memory_controller.lastTime < memory_controller.dutyTime) {
         open_valve(PN);
@@ -530,12 +575,14 @@ void DPRComputer::actuate() {
 }
 
 // ================ testing ================
+//======================================================================================================================
 void status_led(RGBColor color) {
     digitalWrite(RGB_RED, color.red);
     digitalWrite(RGB_GREEN, color.green);
     digitalWrite(RGB_BLUE, color.blue);
 }
 
+//======================================================================================================================
 void turn_on_sequence()
 {
     digitalWrite(LED_BUILTIN, HIGH);
