@@ -272,7 +272,7 @@ void setup() {
   Wire1.onRequest(requestEvent); // Register request handler
 
   // Begin I2C communication with sensors
-  Wire.begin();
+  Wire2.begin();
 
   // Analog sensor precision
   analogReadResolution(12);
@@ -285,9 +285,9 @@ void setup() {
   Serial.println("PN Computer setup done");
 }
 
-PTE7300_I2C mySensor; // attach sensor
-int16_t DSP_T1;
-int sleep_time = 100;
+// PTE7300_I2C mySensor; // attach sensor
+// int16_t DSP_T1;
+// int sleep_time = 100;
 
 void loop() {
   computer.update(millis()); // Update the DPRComputer state machine

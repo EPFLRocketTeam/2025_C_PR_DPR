@@ -2,19 +2,11 @@
 #include <Arduino.h>
 #include "vector"
 
+// ================= ifdef defines =================
 #define DEBUG
-
 #define PRB_DPR
 // #define DPR_LOX
-
 // #define DRY_RUN
-
-
-//#define VENT_SPARE  10
-
-#define VX 8 //spare
-#define VN 9
-#define PN 7 // DPR
 
 // controller constants
 #define KP 1.7
@@ -35,19 +27,40 @@
 
 #define RAMP_DELAY 5000
 
+// ================ pin configuration =================
+// Look at the silkscreen to know where to connect each valve
+#ifdef PRB_DPR
+#define VX 37       //at the place of Me-b
+#define VN 36       //at the place of MO-bC
+#define PN 35       //at th eplace of MOSFET
+#else
+#define VX 8
+#define VN 9
+#define PN 7 
+#endif
+
+
+#ifdef PRB_DPR
+#define RESET       9
+#define RGB_RED     PIN_A7
+#define RGB_GREEN   PIN_A8
+#define RGB_BLUE    PIN_A9
+#define BUZZER      PIN_A1
+#else
 #define RESET       1
 #define RGB_RED     3
 #define RGB_GREEN   2
 #define RGB_BLUE    4
 #define BUZZER      7
+#endif
 
-// Adresses I2C
+// ================ I2C configuration =================
 #define MUX_ADDR    0x70 // 0xE0
 #define SENS_ADDR   0x6C        //or 0x6C
-#define TANK1       0x01        // channel 0
-#define TANK2       0x02        // channel 1
-#define TANK3       0x08        // channel 2
-#define COPV        0x04        // channel 3
+#define TANK1       0x01        // channel 0 --> EIN on PRB
+#define TANK2       0x02        // channel 1 --> CCC on PRB
+#define TANK3       0x08        // channel 2 --> not on PRB
+#define COPV        0x04        // channel 3 --> CIG on PRB
 
 enum DPR_FSM
 {

@@ -30,8 +30,8 @@ PTE7300_I2C::PTE7300_I2C()
 
 bool PTE7300_I2C::isConnected()
 {
-	Wire.write(_nodeAddress);
-    if (Wire.endTransmission() == 0) {return true;}
+	Wire2.write(_nodeAddress);
+    if (Wire2.endTransmission() == 0) {return true;}
 	else { return false;}
 }
 
@@ -91,18 +91,18 @@ unsigned int PTE7300_I2C::readRegisterNoCRC(uint8_t address, unsigned int number
   
   unsigned int bytesRead = 0; // default return var
 
-  Wire.beginTransmission(_nodeAddress);
-  Wire.write(address); //Send register address
-  Wire.endTransmission();
-  Wire.requestFrom(_nodeAddress, number * 2); //Request register, note that register is 2 bytes wide
+  Wire2.beginTransmission(_nodeAddress);
+  Wire2.write(address); //Send register address
+  Wire2.endTransmission();
+  Wire2.requestFrom(_nodeAddress, number * 2); //Request register, note that register is 2 bytes wide
 
-  bytesRead = Wire.available();
+  bytesRead = Wire2.available();
   if ( bytesRead >= number * 2 )
   {
     for (int i = 0; i < number; i++)
     {
-      byte lowByte = Wire.read(); // read low byte
-	  byte highByte = Wire.read(); // read high byte
+      byte lowByte = Wire2.read(); // read low byte
+	  byte highByte = Wire2.read(); // read high byte
 	  buffer[i] = highByte << 8 | lowByte; // join two bytes into word (uint16)
     }
   }
@@ -137,24 +137,24 @@ unsigned int PTE7300_I2C::readRegisterCRC(uint8_t address, unsigned int number, 
   crc8_hold = this->calc_crc8(0xD5,0xFF,all,3);
   // Serial.println("Info: New CRC8-stub is 0x" + String(crc8_hold, HEX));
 
-  Wire.beginTransmission(_nodeAddress | 1); //indicate CRC-transmission by setting first address bit to 1
-  Wire.write(address); //Send register address
-  Wire.write((((number*2)-1) << 4) | (crc4 & 0x0F));
-  Wire.endTransmission();
-  Wire.requestFrom(_nodeAddress | 1,(number*2)+1); //Request registers, note that registers 2 bytes wide
+  Wire2.beginTransmission(_nodeAddress | 1); //indicate CRC-transmission by setting first address bit to 1
+  Wire2.write(address); //Send register address
+  Wire2.write((((number*2)-1) << 4) | (crc4 & 0x0F));
+  Wire2.endTransmission();
+  Wire2.requestFrom(_nodeAddress | 1,(number*2)+1); //Request registers, note that registers 2 bytes wide
   node = ((_nodeAddress << 1) & 0xFC) | 0x03; // CRC-Flag 1, Readflag 1
-  bytesRead = Wire.available();
+  bytesRead = Wire2.available();
   // Serial.println("Bytes read: " + String(bytesRead, DEC));
   if(bytesRead >= (number*2)+1) 
   {
     for(int i=0;i<number;i++)
     {
-       byte lowByte = Wire.read(); // read low byte
-	   byte highByte = Wire.read(); // read high byte
+       byte lowByte = Wire2.read(); // read low byte
+	   byte highByte = Wire2.read(); // read high byte
 	   buffer[i] = highByte << 8 | lowByte; // join two bytes into word (uint16)
     }
   }
-  int crc8_received = Wire.read(); // read CRC byte, after reading the databuffer words
+  int crc8_received = Wire2.read(); // read CRC byte, after reading the databuffer words
   // Serial.println("CRC8 received: 0x" + String(crc8_received,HEX));
  
   all[0]=node;
@@ -190,15 +190,15 @@ void PTE7300_I2C::writeRegister(uint8_t address, unsigned int number, uint16_t* 
 
 void PTE7300_I2C::writeRegisterNoCRC(uint8_t address, unsigned int number, uint16_t* data)
 {
-	Wire.beginTransmission(_nodeAddress);
-	Wire.write(address); //Send register address
+	Wire2.beginTransmission(_nodeAddress);
+	Wire2.write(address); //Send register address
 
 	for (int i = 0; i < number; i++)
 	{
-		Wire.write(data[i] & 0x00FF); //write low byte
-		Wire.write((data[i] & 0xFF00) >> 8); // write high byte
+		Wire2.write(data[i] & 0x00FF); //write low byte
+		Wire2.write((data[i] & 0xFF00) >> 8); // write high byte
 	}
-	Wire.endTransmission();
+	Wire2.endTransmission();
 }
 
 
@@ -229,16 +229,16 @@ void PTE7300_I2C::writeRegisterCRC(uint8_t address, unsigned int number, uint16_
 
 	crc8_hold_all = crc8all;
 
-	Wire.beginTransmission(_nodeAddress | 1); //indicate CRC-transmission by setting first address bit to 1
-	Wire.write(address); //Send register address
-	Wire.write((((number * 2) - 1) << 4) | (crc4 & 0x0F));
+	Wire2.beginTransmission(_nodeAddress | 1); //indicate CRC-transmission by setting first address bit to 1
+	Wire2.write(address); //Send register address
+	Wire2.write((((number * 2) - 1) << 4) | (crc4 & 0x0F));
 	for (int i = 0; i < number; i++)
 	{
-		Wire.write(data[i] & 0x00FF); //write low byte
-		Wire.write((data[i] & 0xFF00) >> 8); // write high byte
+		Wire2.write(data[i] & 0x00FF); //write low byte
+		Wire2.write((data[i] & 0xFF00) >> 8); // write high byte
 	}
-	Wire.write(crc8all);
-	Wire.endTransmission();
+	Wire2.write(crc8all);
+	Wire2.endTransmission();
 
 }
 

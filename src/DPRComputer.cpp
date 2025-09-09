@@ -81,8 +81,19 @@ void DPRComputer::reset_dpr() {
     memory_controller.controlPeriod = CONTROL_PERIOD;
 }
 
-// ========= valve and motor control =========
-//======================================================================================================================
+// =========================== valve and motor control ===========================
+
+/**
+ * @brief Opens the specified valve and updates its state in memory.
+ *
+ * This function takes an integer identifier for a valve and performs the following actions:
+ * - For the PN valve: Sets the PN state to true in memory and sets the corresponding digital pin HIGH.
+ * - For the VX valve: Sets the VX state to false in memory and sets the corresponding digital pin LOW.
+ * - For the VN valve: Sets the VN state to true in memory and sets the corresponding digital pin HIGH.
+ * - For any other value: No action is taken.
+ *
+ * @param valve The identifier of the valve to open (e.g., PN, VX, VN).
+ */
 void DPRComputer::open_valve(int valve)
 {
     switch (valve)
@@ -104,7 +115,21 @@ void DPRComputer::open_valve(int valve)
     }
 }
 
-//======================================================================================================================
+
+/**
+ * @brief Closes the specified valve by updating its state and controlling the hardware pin.
+ *
+ * This function takes an integer identifier for a valve and performs the following actions:
+ * - For the PN valve: Sets its state to closed (false) in memory and sets the corresponding hardware pin LOW.
+ * - For the VX valve: Sets its state to open (true) in memory and sets the corresponding hardware pin HIGH.
+ * - For the VN valve: Sets its state to closed (false) in memory and sets the corresponding hardware pin LOW.
+ * - For any other value, no action is taken.
+ *
+ * @param valve The identifier of the valve to close (e.g., PN, VX, VN).
+ *
+ * @note The function assumes that the valve identifiers (PN, VX, VN) are defined elsewhere,
+ *       and that the memory object and digitalWrite function are available in the class context.
+ */
 void DPRComputer::close_valve(int valve)
 {
     switch (valve)
@@ -127,8 +152,16 @@ void DPRComputer::close_valve(int valve)
 }
 
 
-// ========= valve and motor control =========
-//======================================================================================================================
+/**
+ * @brief Actuates the specified valve by setting its state in memory and sending a digital HIGH signal.
+ *
+ * This function updates the internal memory state for the given valve type (PN, VX, or VN)
+ * and sets the corresponding hardware pin to HIGH using digitalWrite.
+ * If the valve type does not match any known type, no memory state is updated,
+ * but digitalWrite is still called with the provided valve identifier.
+ *
+ * @param valve The identifier of the valve to actuate. Should be one of PN, VX, or VN.
+ */
 void DPRComputer::actuate_valve(int valve)
 {
     switch (valve)
@@ -149,7 +182,15 @@ void DPRComputer::actuate_valve(int valve)
     digitalWrite(valve, HIGH);
 }
 
-//======================================================================================================================
+
+/**
+ * @brief Deactivates the specified valve by updating its state in memory and setting its output to LOW.
+ *
+ * This function sets the internal memory state of the given valve to false (deactivated)
+ * and sends a LOW signal to the corresponding hardware pin using digitalWrite.
+ *
+ * @param valve The identifier of the valve to be deactivated. Valid values are PN, VX, and VN.
+ */
 void DPRComputer::deactuate_valve(int valve)
 {
     switch (valve)
@@ -171,8 +212,18 @@ void DPRComputer::deactuate_valve(int valve)
 }
 
 
-// ========= sensor reading =========
-//======================================================================================================================
+// =========================== sensor reading ===========================
+/**
+ * @brief Reads the pressure value from the specified sensor.
+ *
+ * This function selects the given sensor using the multiplexer, reads its digital signal,
+ * and converts it to a pressure value in bar. The conversion formula depends on the sensor type:
+ * - For TANK1, TANK2, and TANK3, the output is scaled to a 0-100 bar range.
+ * - For COPV, the output is scaled to a 0-400 bar range.
+ *
+ * @param sensor The identifier of the sensor to read (e.g., TANK1, TANK2, TANK3, COPV).
+ * @return The pressure value in bar as a float. Returns 0.0 if the sensor type is not recognized.
+ */
 float DPRComputer::read_pressure(int sensor)
 {
     int DSP_S = 0;
@@ -202,7 +253,17 @@ float DPRComputer::read_pressure(int sensor)
     return press;
 }
 
-//======================================================================================================================
+
+/**
+ * @brief Reads the temperature from the specified sensor.
+ *
+ * Selects the given sensor using the multiplexer, reads the raw DSP_T value,
+ * and converts it to a temperature in degrees Celsius using the formula:
+ * temp = DSP_T * 82.5 / 16000 + 42.5.
+ *
+ * @param sensor The index or identifier of the sensor to read from.
+ * @return The temperature in degrees Celsius as a float.
+ */
 float DPRComputer::read_temperature(int sensor)
 {
     //read temperature
@@ -217,25 +278,39 @@ float DPRComputer::read_temperature(int sensor)
 }
 
 
-// ========= getter =========
-//======================================================================================================================
+// ============================ getter ====================================
 dpr_memory_t DPRComputer::get_memory() { return memory; }
 
 // ========= setter =========
-//======================================================================================================================
 void DPRComputer::set_state(DPR_FSM new_state) { memory.state = new_state; }
 
-//======================================================================================================================
+
+// =========================== I2C multiplexer ===========================
+/**
+ * @brief Selects a channel on the I2C multiplexer.
+ *
+ * Sends a command over I2C to the multiplexer at address MUX_ADDR to select the specified channel.
+ *
+ * @param ch The channel number to select on the multiplexer.
+ * @return true if the multiplexer acknowledges the command (ACK received), false otherwise.
+ */
 bool muxSelect(uint8_t ch) {
     Wire.beginTransmission(MUX_ADDR);
     Wire.write(ch);
     return Wire.endTransmission() == 0; // true if ACKed
 }
 
-// ========== FSM ===========
-//======================================================================================================================
-//======================================================================================================================
-//======================================================================================================================
+// ================================ FSM =================================
+/**
+ * @brief Updates the DPRComputer state machine and handles system operations.
+ *
+ * This function is called periodically to update the internal state of the DPRComputer
+ * based on the current state, elapsed time, and sensor readings. It manages state transitions,
+ * actuates valves, updates status LEDs, and reads temperature and pressure sensors.
+ * In debug mode, it also prints sensor values to the serial output.
+ *
+ * @param time The current system time in milliseconds.
+ */
 void DPRComputer::update(int time)
 {
     // Update the state machine
@@ -402,10 +477,17 @@ void DPRComputer::update(int time)
         memory.time_msg = time;
     }
     #endif
-
 }
 
-//======================================================================================================================
+//==============================================================================
+/**
+ * @brief Sets the offset values for each tank in the memory controller.
+ *
+ * This function updates the offset values for tank1, tank2, and tank3 in the
+ * memory_controller by assigning them the current pressure readings from the
+ * corresponding tanks stored in memory. This is typically used to calibrate
+ * or reset the reference pressure values for each tank.
+ */
 #ifdef PRB_DPR
     void DPRComputer::set_offset() {
         memory_controller.tank1_offset = memory.tank1_press;
@@ -418,7 +500,16 @@ void DPRComputer::update(int time)
     }
 #endif
 
-//======================================================================================================================
+
+/**
+ * @brief Initializes the DPRComputer system state.
+ *
+ * This function sets the initial state of the valves to regulation mode by closing
+ * the VX, VN, and PN valves. It reads and stores the initial COPV
+ * pressure into the memory controller. It also initializes the ramped pressure and PID controller
+ * variables (integral, derivative, and error) to zero. Additionally, it records the start time
+ * using the current system time and resets the last time variable.
+ */
 void DPRComputer::initialize() {
     // Valves in regulation state
     close_valve(VX);
@@ -440,7 +531,19 @@ void DPRComputer::initialize() {
     memory_controller.lastTime = 0;
 }
 
-//======================================================================================================================
+
+/**
+ * @brief Performs the regulation loop for the DPRComputer.
+ *
+ * This function checks if the control period has elapsed since the last regulation step.
+ * If so, it updates the last execution time, reads and filters the tank pressure,
+ * updates the COPV pressure from memory, computes the pressure error, calculates
+ * the full scale pressure, executes the PID controller, stores the last error,
+ * and updates the duty time based on the computed duty ratio and control period.
+ *
+ * The regulation loop is responsible for maintaining the desired tank pressure
+ * by adjusting the control output using a PID algorithm.
+ */
 void DPRComputer::regulation() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
@@ -454,7 +557,22 @@ void DPRComputer::regulation() {
     }
 }
 
-//======================================================================================================================
+
+/**
+ * @brief Handles the pressurization control logic for the DPR system.
+ *
+ * This function is responsible for managing the pressurization process by:
+ * - Periodically updating control logic based on a defined control period.
+ * - Ramping the target pressure up to a specified limit using a linear ramp function.
+ * - Transitioning the system state to regulation mode once the ramped pressure reaches the limit.
+ * - Filtering and updating the current tank and COPV pressures.
+ * - Calculating the pressure error and full-scale pressure for control purposes.
+ * - Executing the PID control algorithm to adjust system output.
+ * - Updating internal controller memory for error tracking and duty cycle computation.
+ *
+ * The function should be called regularly (e.g., in a main loop or timer interrupt)
+ * to ensure timely control updates.
+ */
 void DPRComputer::pressurization() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
@@ -474,7 +592,18 @@ void DPRComputer::pressurization() {
     }
 }
 
-//======================================================================================================================
+
+/**
+ * @brief Filters and returns the estimated tank pressure by removing outliers.
+ *
+ * This function reads the pressures from three tanks and applies an outlier rejection filter.
+ * If the @p controller flag is true, it subtracts the corresponding controller offsets from each tank's pressure.
+ * It then compares the absolute differences between the tank pressures to identify the outlier.
+ * The function returns the average of the two closest pressure readings, effectively filtering out the outlier.
+ *
+ * @param controller If true, applies controller offsets to the tank pressures before filtering.
+ * @return The filtered tank pressure as the average of the two closest pressure readings.
+ */
 #ifdef PRB_DPR
 float DPRComputer::filterTankPressure(bool controller) {
     if (controller) {
@@ -485,61 +614,82 @@ float DPRComputer::filterTankPressure(bool controller) {
     }
 }
 #else
-    float DPRComputer::filterTankPressure(bool controller) {
-        float pressure1 = 0.0;
-        float pressure2 = 0.0;
-        float pressure3 = 0.0;
+float DPRComputer::filterTankPressure(bool controller) {
+    float pressure1 = 0.0;
+    float pressure2 = 0.0;
+    float pressure3 = 0.0;
 
-        if (controller) {
-            pressure1 = memory.tank1_press - memory_controller.tank1_offset;
-            pressure2 = memory.tank2_press - memory_controller.tank2_offset;
-            pressure3 = memory.tank3_press - memory_controller.tank3_offset;
-        }
-        else {
-            pressure1 = memory.tank1_press;
-            pressure2 = memory.tank2_press;
-            pressure3 = memory.tank3_press;
-        }
-
-        if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
-            return 0.5*(pressure2 + pressure3);
-        }
-        else if ((abs(pressure2 - pressure1) > abs(pressure1 - pressure3)) && (abs(pressure2 - pressure3) > abs(pressure1 - pressure3))) {
-            return 0.5*(pressure1 + pressure3);
-        }
-        else return 0.5*(pressure1 + pressure2);
+    if (controller) {
+        pressure1 = memory.tank1_press - memory_controller.tank1_offset;
+        pressure2 = memory.tank2_press - memory_controller.tank2_offset;
+        pressure3 = memory.tank3_press - memory_controller.tank3_offset;
     }
+    else {
+        pressure1 = memory.tank1_press;
+        pressure2 = memory.tank2_press;
+        pressure3 = memory.tank3_press;
+    }
+
+    if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
+        return 0.5*(pressure2 + pressure3);
+    }
+    else if ((abs(pressure2 - pressure1) > abs(pressure1 - pressure3)) && (abs(pressure2 - pressure3) > abs(pressure1 - pressure3))) {
+        return 0.5*(pressure1 + pressure3);
+    }
+    else return 0.5*(pressure1 + pressure2);
+}
 #endif
 
-
-//======================================================================================================================
+/**
+ * @brief Filters and returns a reliable tank temperature by excluding the most divergent reading.
+ *
+ * This function takes three tank temperature readings from memory (tank1_temp, tank2_temp, tank3_temp)
+ * and computes a filtered value by discarding the reading that differs the most from the other two.
+ * It returns the average of the two closest temperature readings, providing a simple outlier rejection
+ * to improve measurement reliability.
+ *
+ * @return The filtered tank temperature as the average of the two closest readings.
+ */
 #ifdef PRB_DPR
-    float DPRComputer::filterTankTemp() {
-        return memory.tank1_temp;
-    }
+float DPRComputer::filterTankTemp() {
+    return memory.tank1_temp;
+}
 #else
-    float DPRComputer::filterTankTemp() {
-        float temp1 = memory.tank1_temp;
-        float temp2 = memory.tank2_temp;
-        float temp3 = memory.tank3_temp;
 
-        if ((abs(temp1 - temp2) > abs(temp2 - temp3)) && (abs(temp1 - temp3) > abs(temp2 - temp3))) {
-            return 0.5*(temp2 + temp3);
-        }
-        else if ((abs(temp2 - temp1) > abs(temp1 - temp3)) && (abs(temp2 - temp3) > abs(temp1 - temp3))) {
-            return 0.5*(temp1 + temp3);
-        }
-        else return 0.5*(temp1 + temp2);
+float DPRComputer::filterTankTemp() {
+    float temp1 = memory.tank1_temp;
+    float temp2 = memory.tank2_temp;
+    float temp3 = memory.tank3_temp;
+
+    if ((abs(temp1 - temp2) > abs(temp2 - temp3)) && (abs(temp1 - temp3) > abs(temp2 - temp3))) {
+        return 0.5*(temp2 + temp3);
     }
+    else if ((abs(temp2 - temp1) > abs(temp1 - temp3)) && (abs(temp2 - temp3) > abs(temp1 - temp3))) {
+        return 0.5*(temp1 + temp3);
+    }
+    else return 0.5*(temp1 + temp2);
+}
 #endif
 
-
-//======================================================================================================================
+//================================= full scale ========================================
 float DPRComputer::computeFullScale() {
     return (memory_controller.limitPressure+(memory_controller.copvPressure-memory_controller.initialCopvPressure)*(memory_controller.limitPressure/(memory_controller.initialCopvPressure-memory_controller.limitPressure)));
 }
 
-//======================================================================================================================
+//===================================== PID ==========================================
+/**
+ * @brief Computes the PID control output and updates the duty ratio.
+ *
+ * This function calculates the proportional, integral, and derivative (PID) terms
+ * based on the current error and control period stored in the memory_controller.
+ * It updates the integral and derivative contributions, computes the total correction,
+ * and normalizes the output to determine the appropriate duty ratio for the actuator.
+ * The duty ratio is clamped between 0.0 and 1.0 based on the correction value and
+ * the full scale pressure. If the correction is negative, the integral term is reset.
+ *
+ * @note This function assumes that the memory_controller structure contains the necessary
+ *       PID parameters (kp, ki, kd), error values, control period, and output limits.
+ */
 void DPRComputer::pid() {
     float correction = 0.0;
 
@@ -564,7 +714,14 @@ void DPRComputer::pid() {
     }
 }
 
-//======================================================================================================================
+/**
+ * @brief Controls the actuation of a valve based on timing conditions.
+ *
+ * This function checks if the elapsed time since the last memory controller event
+ * is less than the specified duty time. If so, it opens the valve associated with PN.
+ * Otherwise, it closes the valve. This mechanism is typically used to implement
+ * pulse-width modulation (PWM) or similar timing-based control for the valve.
+ */
 void DPRComputer::actuate() {
     if (millis() - memory_controller.lastTime < memory_controller.dutyTime) {
         open_valve(PN);
@@ -574,15 +731,13 @@ void DPRComputer::actuate() {
     }
 }
 
-// ================ testing ================
-//======================================================================================================================
+// =========================== status LED ===========================
 void status_led(RGBColor color) {
     digitalWrite(RGB_RED, color.red);
     digitalWrite(RGB_GREEN, color.green);
     digitalWrite(RGB_BLUE, color.blue);
 }
 
-//======================================================================================================================
 void turn_on_sequence()
 {
     digitalWrite(LED_BUILTIN, HIGH);
