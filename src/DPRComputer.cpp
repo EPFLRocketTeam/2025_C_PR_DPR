@@ -606,12 +606,19 @@ void DPRComputer::pressurization() {
  */
 #ifdef PRB_DPR
 float DPRComputer::filterTankPressure(bool controller) {
+    float pressure1 = 0.0;
+    float pressure2 = 0.0;
+    
     if (controller) {
-        return memory.tank1_press - memory_controller.tank1_offset;
+        pressure1 = memory.tank1_press - memory_controller.tank1_offset;
+        pressure2 = memory.tank2_press - memory_controller.tank2_offset;
     }
     else {
-        return memory.tank1_press;
+        pressure1 = memory.tank1_press;
+        pressure2 = memory.tank2_press;
     }
+
+    return 0.5 * (pressure1 + pressure2);
 }
 #else
 float DPRComputer::filterTankPressure(bool controller) {
