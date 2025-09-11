@@ -1,8 +1,6 @@
 // Last update: 11/03/2025
 #include "DPRComputer.h"
 #include "Wire.h"
-
-
 #define TEST_WITHOUT_PRESSURE
 
 //======================================================================================================================
@@ -295,9 +293,9 @@ void DPRComputer::set_state(DPR_FSM new_state) { memory.state = new_state; }
  * @return true if the multiplexer acknowledges the command (ACK received), false otherwise.
  */
 bool muxSelect(uint8_t ch) {
-    Wire.beginTransmission(MUX_ADDR);
-    Wire.write(ch);
-    return Wire.endTransmission() == 0; // true if ACKed
+    Wire2.beginTransmission(MUX_ADDR);
+    Wire2.write(ch);
+    return Wire2.endTransmission() == 0; // true if ACKed
 }
 
 // ================================ FSM =================================

@@ -1,9 +1,3 @@
 [submodule "src/2024_C_AV_INTRANET"]
 	path = src/2024_C_AV_INTRANET
 	url = git@github.com:EPFLRocketTeam/2024_C_AV_INTRANET.git
-[submodule "intranet"]
-	path = intranet
-	url = git@github.com:EPFLRocketTeam/2024_C_AV_INTRANET.git
-[submodule "src/intranet"]
-	path = src/intranet
-	url = git@github.com:EPFLRocketTeam/2024_C_AV_INTRANET.git
