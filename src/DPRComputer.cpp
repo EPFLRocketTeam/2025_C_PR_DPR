@@ -269,6 +269,9 @@ float DPRComputer::read_temperature(int sensor)
     int DSP_T = 0;
 
     muxSelect(sensor);
+    if(!my_sensor.isConnected())
+        return 0;
+        
     DSP_T = my_sensor.readDSP_T();
     temp = DSP_T * 82.5 / 16000 + 42.5;
     
