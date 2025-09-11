@@ -31,8 +31,8 @@
 // Look at the silkscreen to know where to connect each valve
 #ifdef PRB_DPR
 #define VX 37       //at the place of Me-b
-#define VN 36       //at the place of MO-bC
-#define PN 35       //at th eplace of MOSFET
+#define PN 36       //at the place of MO-bC
+#define VN 35       //at th eplace of MOSFET
 #else
 #define VX 8
 #define VN 9
