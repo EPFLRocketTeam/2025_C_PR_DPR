@@ -269,13 +269,17 @@ float DPRComputer::read_temperature(int sensor)
     int DSP_T = 0;
 
     muxSelect(sensor);
-    if(!my_sensor.isConnected())
-        return 0;
-        
+    
     DSP_T = my_sensor.readDSP_T();
     temp = DSP_T * 82.5 / 16000 + 42.5;
     
     return temp;
+}
+
+bool DPRComputer::check_avail(int sensor) {
+    if(!muxSelect(sensor)) return false;
+    Wire2.beginTransmission(SENS_ADDR);
+    return Wire2.endTransmission() == 0;
 }
 
 
@@ -442,9 +446,15 @@ void DPRComputer::update(int time)
     }
 
     #ifdef PRB_DPR
+
+        __sensor1_available = check_avail(TANK1);
+        __sensor2_available  = check_avail(TANK2);
+
         memory.tank1_temp = read_temperature(TANK1);
+        memory.tank2_temp = read_temperature(TANK2);
         memory.copv_temp = read_temperature(COPV);
         memory.tank1_press = read_pressure(TANK1);
+        memory.tank2_press = read_pressure(TANK2);
         memory.copv_press = read_pressure(COPV);
     #else
         memory.tank1_temp = read_temperature(TANK1);
@@ -463,10 +473,14 @@ void DPRComputer::update(int time)
         Serial.println(memory.tank1_temp);
         Serial.print("TANK1 Press: ");
         Serial.println(memory.tank1_press);
+        Serial.print("TANK1 Avail: ");
+        Serial.println(__sensor1_available);
         Serial.print("TANK2 Temp: ");
         Serial.println(memory.tank2_temp);
         Serial.print("TANK2 Press: ");
         Serial.println(memory.tank2_press);
+        Serial.print("TANK2 Avail: ");
+        Serial.println(__sensor2_available);
         Serial.print("tank3 Temp: ");
         Serial.println(memory.tank3_temp);
         Serial.print("tank3 Press: ");
@@ -619,7 +633,19 @@ float DPRComputer::filterTankPressure(bool controller) {
         pressure2 = memory.tank2_press;
     }
 
-    return 0.5 * (pressure1 + pressure2);
+    float avg = 0;
+    float sens = 0;
+    if(__sensor1_available && !isinf(pressure1) && !isnan(pressure1)){
+        avg += pressure1;
+        sens++;
+    }
+
+    if(__sensor2_available && !isinf(pressure2) && !isnan(pressure2)) {
+        avg += pressure2;
+        sens++;
+    }
+
+    return avg/sens;
 }
 #else
 float DPRComputer::filterTankPressure(bool controller) {

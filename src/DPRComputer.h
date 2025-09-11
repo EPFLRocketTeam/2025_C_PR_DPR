@@ -57,10 +57,14 @@ private:
     PTE7300_I2C my_sensor;
     int16_t value_sensor;
 
+    bool __sensor1_available = false;
+    bool __sensor2_available = false;
+
     //sensor reading
     float read_pressure(int sensor);
     float read_temperature(int sensor);
-
+    bool check_avail(int sensor);
+    
     // =============== Controller ==============
     void pid();
     float computeFullScale();
