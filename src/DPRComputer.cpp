@@ -15,6 +15,8 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory_controller.tank1_offset = 0.0;
     memory_controller.tank1_offset = 0.0;
     memory_controller.tank1_offset = 0.0;
+    memory.tank1_state = false;
+    memory.tank2_state = false;
     memory.PN_state = false;
     memory.VX_state = false;
     memory.VN_state = false;
@@ -54,6 +56,8 @@ void DPRComputer::reset_dpr() {
     memory_controller.tank1_offset = 0.0;
     memory_controller.tank1_offset = 0.0;
     memory_controller.tank1_offset = 0.0;
+    memory.tank1_state = false;
+    memory.tank2_state = false;
     memory.PN_state = false;
     memory.VX_state = false;
     memory.VN_state = false;
@@ -447,8 +451,8 @@ void DPRComputer::update(int time)
 
     #ifdef PRB_DPR
 
-        __sensor1_available = check_avail(TANK1);
-        __sensor2_available  = check_avail(TANK2);
+        memory.tank1_state = check_avail(TANK1);
+        memory.tank1_state  = check_avail(TANK2);
 
         memory.tank1_temp = read_temperature(TANK1);
         memory.tank2_temp = read_temperature(TANK2);
@@ -474,13 +478,13 @@ void DPRComputer::update(int time)
         Serial.print("TANK1 Press: ");
         Serial.println(memory.tank1_press);
         Serial.print("TANK1 Avail: ");
-        Serial.println(__sensor1_available);
+        Serial.println(memory.tank1_state);
         Serial.print("TANK2 Temp: ");
         Serial.println(memory.tank2_temp);
         Serial.print("TANK2 Press: ");
         Serial.println(memory.tank2_press);
         Serial.print("TANK2 Avail: ");
-        Serial.println(__sensor2_available);
+        Serial.println(memory.tank2_state);
         Serial.print("tank3 Temp: ");
         Serial.println(memory.tank3_temp);
         Serial.print("tank3 Press: ");
@@ -635,17 +639,22 @@ float DPRComputer::filterTankPressure(bool controller) {
 
     float avg = 0;
     float sens = 0;
-    if(__sensor1_available && !isinf(pressure1) && !isnan(pressure1)){
+    if(memory.tank1_state && !isinf(pressure1) && !isnan(pressure1)){
         avg += pressure1;
         sens++;
     }
 
-    if(__sensor2_available && !isinf(pressure2) && !isnan(pressure2)) {
+    if(memory.tank2_state && !isinf(pressure2) && !isnan(pressure2)) {
         avg += pressure2;
         sens++;
     }
 
-    return avg/sens;
+    if (sens == 0) {
+        return memory_controller.limitPressure;
+    }
+    else {
+        return avg/sens;
+    }
 }
 #else
 float DPRComputer::filterTankPressure(bool controller) {

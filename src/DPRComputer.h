@@ -19,6 +19,8 @@ typedef struct dpr_memory_t {
     float tank1_press;
     float tank2_press;
     float tank3_press;
+    bool tank1_state;
+    bool tank2_state;
     float copv_temp;
     float copv_press;
     int max_time_passivate;
@@ -56,9 +58,6 @@ private:
     dpr_memory_controller_t memory_controller;
     PTE7300_I2C my_sensor;
     int16_t value_sensor;
-
-    bool __sensor1_available = false;
-    bool __sensor2_available = false;
 
     //sensor reading
     float read_pressure(int sensor);
