@@ -644,10 +644,15 @@ float DPRComputer::filterTankPressure(bool controller) {
         avg += pressure2;
         sens++;
     }
-    
+
+
+    if (sens == 0 && controller) {
+        return memory_controller.limitPressure;
+    }
+
     if(sens == 0)
         return 0;
-
+        
     return avg/sens;
 }
 #else
