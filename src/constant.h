@@ -16,14 +16,14 @@
 #define PRESSURIZATION_OX_SET_PRESSURE 29.03
 #define PRESSURIZATION_FUEL_SET_PRESSURE 18.79
 #else
-#define PRESSURIZATION_OX_SET_PRESSURE 13.834
-#define PRESSURIZATION_FUEL_SET_PRESSURE 16.214
+#define PRESSURIZATION_OX_SET_PRESSURE 48
+#define PRESSURIZATION_FUEL_SET_PRESSURE 51.5
 #endif
 
 #define PASSIVATION_DELAY_NO_COM_DPR 140000
 #define PASSIVATION_COPV_DURATION 300000
 
-#define RAMP_DELAY 5000
+#define RAMP_DELAY 10000
 
 // ================ pin configuration =================
 // Look at the silkscreen to know where to connect each valve
