@@ -72,7 +72,6 @@ private:
     void pressurization();
     void actuate();
     void initialize();
-    void set_offset();
 
 public:
     DPRComputer(DPR_FSM);
@@ -97,7 +96,7 @@ public:
     // FSM
     void update(int time);
 
-    float filterTankPressure(bool controller);
+    float filterTankPressure();
     float filterTankTemp();
 };
 

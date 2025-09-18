@@ -324,7 +324,6 @@ void DPRComputer::update(int time)
     switch (memory.state)
     {
         case INITIALIZE_PRESSURIZATION:
-            set_offset();
             initialize();
             memory.state = PRESSURIZATION;
             break;
@@ -342,11 +341,6 @@ void DPRComputer::update(int time)
                 memory.time_led = time;
                 memory.status_led = false;
             }
-            break;
-
-        case INITIALIZE_REGULATION:
-            initialize();
-            memory.state = REGULATION;
             break;
 
         case REGULATION:
@@ -494,27 +488,6 @@ void DPRComputer::update(int time)
     #endif
 }
 
-//==============================================================================
-/**
- * @brief Sets the offset values for each tank in the memory controller.
- *
- * This function updates the offset values for tank1, tank2, and tank3 in the
- * memory_controller by assigning them the current pressure readings from the
- * corresponding tanks stored in memory. This is typically used to calibrate
- * or reset the reference pressure values for each tank.
- */
-#ifdef PRB_DPR
-    void DPRComputer::set_offset() {
-        memory_controller.tank1_offset = memory.tank1_press;
-    }
-#else
-    void DPRComputer::set_offset() {
-        memory_controller.tank1_offset = memory.tank1_press;
-        memory_controller.tank2_offset = memory.tank2_press;
-        memory_controller.tank3_offset = memory.tank3_press;
-    }
-#endif
-
 
 /**
  * @brief Initializes the DPRComputer system state.
@@ -562,7 +535,7 @@ void DPRComputer::initialize() {
 void DPRComputer::regulation() {
     if (millis() - memory_controller.lastTime > memory_controller.controlPeriod) {
         memory_controller.lastTime = millis();
-        memory_controller.tankPressure = filterTankPressure(true);
+        memory_controller.tankPressure = filterTankPressure();
         memory_controller.copvPressure = memory.copv_press;
         memory_controller.error = memory_controller.limitPressure - memory_controller.tankPressure;
         memory_controller.fullScalePressure = computeFullScale();
@@ -595,9 +568,9 @@ void DPRComputer::pressurization() {
             memory_controller.rampedPressure = (memory_controller.limitPressure / RAMP_DELAY)*millis() - (memory_controller.limitPressure*memory_controller.startTime)/RAMP_DELAY;
         }
         else {
-            memory.state = INITIALIZE_REGULATION;
+            memory.state = REGULATION;
         }
-        memory_controller.tankPressure = filterTankPressure(true);
+        memory_controller.tankPressure = filterTankPressure();
         memory_controller.copvPressure = memory.copv_press;
         memory_controller.error = memory_controller.rampedPressure - memory_controller.tankPressure;
         memory_controller.fullScalePressure = computeFullScale();
@@ -656,21 +629,14 @@ float DPRComputer::filterTankPressure(bool controller) {
     return avg/sens;
 }
 #else
-float DPRComputer::filterTankPressure(bool controller) {
+float DPRComputer::filterTankPressure() {
     float pressure1 = 0.0;
     float pressure2 = 0.0;
     float pressure3 = 0.0;
 
-    if (controller) {
-        pressure1 = memory.tank1_press - memory_controller.tank1_offset;
-        pressure2 = memory.tank2_press - memory_controller.tank2_offset;
-        pressure3 = memory.tank3_press - memory_controller.tank3_offset;
-    }
-    else {
-        pressure1 = memory.tank1_press;
-        pressure2 = memory.tank2_press;
-        pressure3 = memory.tank3_press;
-    }
+    pressure1 = memory.tank1_press;
+    pressure2 = memory.tank2_press;
+    pressure3 = memory.tank3_press;
 
     if ((abs(pressure1 - pressure2) > abs(pressure2 - pressure3)) && (abs(pressure1 - pressure3) > abs(pressure2 - pressure3))) {
         return 0.5*(pressure2 + pressure3);
@@ -744,12 +710,12 @@ void DPRComputer::pid() {
     // PID correction
     correction = memory_controller.kp*memory_controller.error + memory_controller.ki*memory_controller.integral + memory_controller.kd*memory_controller.derivative;
 
-    if (correction > memory_controller.fullScalePressure) {
-        memory_controller.dutyRatio = 1.0;
-    }
-    else if (correction < 0) {
+    if (correction < 0) {
         memory_controller.dutyRatio = 0.0;
         memory_controller.integral = 0.0;
+    }
+    else if (correction > memory_controller.fullScalePressure) {
+        memory_controller.dutyRatio = 1.0;
     }
     else { // normalisation
         memory_controller.dutyRatio = correction / memory_controller.fullScalePressure;
