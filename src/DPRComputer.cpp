@@ -701,7 +701,7 @@ void DPRComputer::pid() {
     // PID correction
     correction = memory_controller.kp*memory_controller.error + memory_controller.ki*memory_controller.integral + memory_controller.kd*memory_controller.derivative;
 
-    if (correction < 0) {
+    if (correction < 0 || memory_controller.error < 0) {
         memory_controller.dutyRatio = 0.0;
         memory_controller.integral = 0.0;
     }
