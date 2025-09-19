@@ -185,7 +185,7 @@ void requestEvent() {
 
   case AV_NET_DPR_P_XTA:
     Serial.println("Received AV_NET_DPR_P_TANK1 command");
-    resp_val_float = computer.filterTankPressure(false);
+    resp_val_float = computer.filterTankPressure();
     is_resp_int = false; // Ensure we are sending a float response
     break;
 

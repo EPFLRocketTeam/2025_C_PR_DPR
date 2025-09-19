@@ -593,18 +593,12 @@ void DPRComputer::pressurization() {
  * @return The filtered tank pressure as the average of the two closest pressure readings.
  */
 #ifdef PRB_DPR
-float DPRComputer::filterTankPressure(bool controller) {
+float DPRComputer::filterTankPressure() {
     float pressure1 = 0.0;
     float pressure2 = 0.0;
     
-    if (controller) {
-        pressure1 = memory.tank1_press - memory_controller.tank1_offset;
-        pressure2 = memory.tank2_press - memory_controller.tank2_offset;
-    }
-    else {
-        pressure1 = memory.tank1_press;
-        pressure2 = memory.tank2_press;
-    }
+    pressure1 = memory.tank1_press;
+    pressure2 = memory.tank2_press;
 
     float avg = 0;
     float sens = 0;
@@ -619,12 +613,9 @@ float DPRComputer::filterTankPressure(bool controller) {
     }
 
 
-    if (sens == 0 && controller) {
-        return memory_controller.limitPressure;
+    if (sens == 0) {
+        return 499;
     }
-
-    if(sens == 0)
-        return 0;
         
     return avg/sens;
 }
