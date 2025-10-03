@@ -28,14 +28,22 @@
 // ================ pin configuration =================
 // Look at the silkscreen to know where to connect each valve
 #ifdef PRB_DPR
-#define VX 37       //at the place of Me-b
-#define PN 36       //at the place of MO-bC
-#define VN 35       //at th eplace of MOSFET
+    #define VX 37       //at the place of Me-b
+    #define PN 36       //at the place of MO-bC
+    #define VN 35       //at th eplace of MOSFET
+    #ifdef DPR_LOX
+        #define T_EIN       PIN_A12
+        #define T_OIN       PIN_A13
+    #else
+        #define T_EIN       PIN_A12
+        #define T_OIN       PIN_A13
+    #endif
 #else
-#define VX 8
-#define VN 9
-#define PN 7 
+    #define VX 8
+    #define VN 9
+    #define PN 7 
 #endif
+
 
 
 #ifdef PRB_DPR

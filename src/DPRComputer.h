@@ -13,6 +13,8 @@ typedef struct dpr_memory_t {
     bool PN_state;
     bool VX_state;
     bool VN_state;
+    float t_oin_temp;
+    float t_ein_temp;
     float tank1_temp;
     float tank2_temp;
     float tank3_temp;
@@ -22,6 +24,7 @@ typedef struct dpr_memory_t {
     float copv_temp;
     float copv_press;
     int max_time_passivate;
+    bool heating_pad_state;
 } dpr_memory_t;
 
 typedef struct dpr_memory_controller_t {
@@ -92,6 +95,7 @@ public:
 
     //setters
     void set_state(DPR_FSM new_state);
+    void activate_heating_pad(bool state);
 
     // FSM
     void update(int time);

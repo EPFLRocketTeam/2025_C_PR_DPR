@@ -58,27 +58,23 @@ void receiveEvent(int numBytes) {
         status_led(WHITE);
       }
 
-      case AV_NET_DPR_WAKE_UP:
-        Serial.println("Received AV_NET_DPR_WAKE_UP command");
-        status_led(TEAL);
-        break;
-
-      case AV_NET_DPR_IS_WOKEN_UP:
-        Serial.println("Received AV_NET_DPR_IS_WOKEN_UP command");
-        status_led(PURPLE);
-        break;
-
       case AV_NET_DPR_PRESSURIZE: {
           status_led(GREEN);
           dpr_memory_t memory = computer.get_memory();
           uint8_t cmd_pressurize = received_buffer[0];
           if (cmd_pressurize == AV_NET_CMD_ON) {
             if (memory.state == MANUAL) {
+              #ifdef DPR_LOX
+                computer.open_valve(VN); // Activate Heating pad
+              #endif
               computer.set_state(INITIALIZE_PRESSURIZATION);
             }
           }
           else if (cmd_pressurize == AV_NET_CMD_OFF) {
             if (memory.state == REGULATION) {
+              #ifdef DPR_LOX
+                computer.close_valve(VN); // Deactivate Heating pad
+              #endif
               computer.set_state(PRESSURIZATION_OFF);
             }
           }
@@ -102,12 +98,18 @@ void receiveEvent(int numBytes) {
         status_led(PURPLE);
         if (computer.get_memory().state == ABORT_ON_GROUND || computer.get_memory().state == MANUAL) {
           computer.set_state(MANUAL);
+          dpr_memory_t memory = computer.get_memory();
           Serial.println("Received AV_NET_DPR_VALVES_STATE command");
           uint32_t res;
           memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
           uint8_t valves_vx = received_buffer[0];
           uint8_t valves_pn = received_buffer[1];
           uint8_t valves_vn = received_buffer[2];
+
+          if (!memory.heating_pad_state) {
+            computer.activate_heating_pad(true);
+            computer.open_valve(VN); // Activate Heating pad
+          }
 
           if (valves_pn == AV_NET_CMD_ON) {
             computer.actuate_valve(PN);
@@ -131,10 +133,8 @@ void receiveEvent(int numBytes) {
 
           if (valves_vn == AV_NET_CMD_ON) {
             computer.actuate_valve(VN);
-            status_led(GREEN);
           } else if (valves_vn == AV_NET_CMD_OFF) {
             computer.deactuate_valve(VN);
-            // status_led(ORANGE);
           } else {
             status_led(RED);
           }
@@ -206,6 +206,20 @@ void requestEvent() {
     resp_val_float = memory.copv_temp;
     is_resp_int = false; // Ensure we are sending a float response
     break;
+
+  case AV_NET_DPR_T_COPV_EXT:
+  case AV_NET_DPR_T_FLS_80:
+    Serial.println("Received AV_NET_DPR_T_EXT_COPV command");
+    resp_val_float = memory.t_ein_temp; // Currently no external sensor, return COPV temp
+    is_resp_int = false; // Ensure we are sending a float response
+    break;
+
+  case AV_NET_DPR_T_FLS_90:
+  case AV_NET_DPR_T_FLS_50:
+      Serial.println("Received AV_NET_DPR_T_FLS_EXT_ULH command");  
+      resp_val_float = memory.t_oin_temp; // Currently no external sensor, return COPV temp
+      is_resp_int = false; // Ensure we are sending a float response
+      break;
 
   case AV_NET_DPR_VALVES_STATE: {
       status_led(GREEN);

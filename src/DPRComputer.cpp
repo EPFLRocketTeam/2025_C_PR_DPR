@@ -19,6 +19,9 @@ DPRComputer::DPRComputer(DPR_FSM init_state)
     memory.VX_state = false;
     memory.VN_state = false;
     memory.max_time_passivate = 0;
+    memory.heating_pad_state = false;
+    memory.t_oin_temp = 0.0;
+    memory.t_ein_temp = 0.0;
 #ifdef DPR_LOX
     memory_controller.limitPressure = PRESSURIZATION_OX_SET_PRESSURE;
 #else
@@ -58,6 +61,9 @@ void DPRComputer::reset_dpr() {
     memory.VX_state = false;
     memory.VN_state = false;
     memory.max_time_passivate = 0;
+    memory.heating_pad_state = false;
+    memory.t_oin_temp = 0.0;
+    memory.t_ein_temp = 0.0;
 #ifdef DPR_LOX
     memory_controller.limitPressure = PRESSURIZATION_OX_SET_PRESSURE;
 #else
@@ -267,8 +273,35 @@ float DPRComputer::read_temperature(int sensor)
     //read temperature
     float temp = 0.0;
     int DSP_T = 0;
+    int value = 0;
+    float voltage = 0.0;
+    float resistance_pt1000 = 0.0;
+    bool I2C_sensor = false;
 
-    muxSelect(sensor);
+    switch (sensor)
+    {
+        case T_OIN:
+        case T_EIN:
+            //read analog temperature
+            value = analogRead(sensor);
+            voltage = (value * 3.3) / 4095.0; // Assuming a 12-bit ADC and 3V3 reference
+            resistance_pt1000 = (voltage * 1100.0)/(3.3 - voltage); // formula from a resistor divider
+            temp = (resistance_pt1000-1000)/3.85;
+        break;
+
+        case TANK1:  //TANK1
+        case TANK2:  // TANK2
+        case TANK3:
+        case COPV:
+            muxSelect(sensor);
+            I2C_sensor = true;
+        break;
+    
+    default:
+        break;
+    }
+
+    if (!I2C_sensor) return temp;
     
     DSP_T = my_sensor.readDSP_T();
     temp = DSP_T * 82.5 / 16000 + 42.5;
@@ -288,6 +321,7 @@ dpr_memory_t DPRComputer::get_memory() { return memory; }
 
 // ========= setter =========
 void DPRComputer::set_state(DPR_FSM new_state) { memory.state = new_state; }
+void DPRComputer::activate_heating_pad(bool state) { memory.heating_pad_state = state; }
 
 
 // =========================== I2C multiplexer ===========================
@@ -333,7 +367,7 @@ void DPRComputer::update(int time)
             actuate();
 
             if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
-                status_led(RED);
+                status_led(ORANGE);
                 memory.time_led = time;
                 memory.status_led = true;
             } else if (memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
@@ -394,6 +428,7 @@ void DPRComputer::update(int time)
             open_valve(VX);
             close_valve(PN);
             close_valve(VN);
+            memory.heating_pad_state = false;
 
             if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
                 status_led(PURPLE);
@@ -450,6 +485,8 @@ void DPRComputer::update(int time)
         memory.tank1_press = read_pressure(TANK1);
         memory.tank2_press = read_pressure(TANK2);
         memory.copv_press = read_pressure(COPV);
+        memory.t_oin_temp = read_temperature(T_OIN);
+        memory.t_ein_temp = read_temperature(T_EIN);
     #else
         memory.tank1_temp = read_temperature(TANK1);
         memory.tank2_temp = read_temperature(TANK2);
@@ -501,8 +538,16 @@ void DPRComputer::update(int time)
 void DPRComputer::initialize() {
     // Valves in regulation state
     close_valve(VX);
-    close_valve(VN);
     close_valve(PN);
+    
+    #ifdef DPR_LOX
+        if (memory.heating_pad_state) {
+            open_valve(VN); // Activate Heating pad
+        }
+        else {
+            close_valve(VN); // Deactivate Heating pad
+        }
+    #endif
 
     // Read initial COPV pressure
     memory_controller.initialCopvPressure = memory.copv_press;
