@@ -412,12 +412,17 @@ void DPRComputer::update(int time)
 
         case PASSIVATION:
             if (millis() - memory_controller.startTime < PASSIVATION_COPV_DURATION) {
-                open_valve(VN);
+                //open_valve(VN);
+        
                 open_valve(VX);
+            #if DPR_LOX
+                open_valve(PN);
+            #else
                 close_valve(PN);
+            #endif
             }
             else {
-                deactuate_valve(VN);
+                //deactuate_valve(VN);
                 deactuate_valve(VX);
                 deactuate_valve(PN);
             }
