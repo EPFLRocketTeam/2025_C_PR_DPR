@@ -56,6 +56,7 @@ void receiveEvent(int numBytes) {
         Serial.println("Received AV_NET_DPR_TIMESTAMP command");
         // responseValue = millis(); // Respond with current timestamp
         status_led(WHITE);
+        break;
       }
 
       case AV_NET_DPR_PRESSURIZE: {
