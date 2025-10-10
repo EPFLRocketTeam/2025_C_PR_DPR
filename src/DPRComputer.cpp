@@ -415,11 +415,11 @@ void DPRComputer::update(int time)
                 //open_valve(VN);
         
                 open_valve(VX);
-            #if DPR_LOX
+                #if DPR_LOX
                 open_valve(PN);
-            #else
+                #else
                 close_valve(PN);
-            #endif
+                #endif
             }
             else {
                 //deactuate_valve(VN);
@@ -449,8 +449,11 @@ void DPRComputer::update(int time)
         case ABORT_IN_FLIGHT:
             memory.max_time_passivate = 0;
             open_valve(VX);
+            #if DPR_LOX
+            open_valve(PN);
+            #else
             close_valve(PN);
-            open_valve(VN);
+            #endif
 
             if (!memory.status_led && time - memory.time_led >= LED_TIMEOUT) {
                 status_led(ORANGE);
