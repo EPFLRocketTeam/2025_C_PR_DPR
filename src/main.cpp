@@ -22,8 +22,8 @@ void receiveEvent(int numBytes) {
   // Clear buffer
   for (int i = 0; i < 4; ++i) received_buffer[i] = 0;
 
-  Serial.print("Received I2C command, nb bytes:");
-  Serial.println(numBytes);
+  // Serial.print("Received I2C command, nb bytes:");
+  // Serial.println(numBytes);
 
   int bytesRead = 0;
   if (numBytes >= 1) {
@@ -47,13 +47,13 @@ void receiveEvent(int numBytes) {
       Serial.print(received_buffer[i], HEX);
       if (i < 3) Serial.print(", ");
     }
-    Serial.println(); 
+    // Serial.println(); 
 
     
     // Set responseValue according to command, but do not write here
     switch (received_command) {
       case AV_NET_DPR_TIMESTAMP: {
-        Serial.println("Received AV_NET_DPR_TIMESTAMP command");
+        // Serial.println("Received AV_NET_DPR_TIMESTAMP command");
         // responseValue = millis(); // Respond with current timestamp
         status_led(WHITE);
         break;
@@ -80,7 +80,7 @@ void receiveEvent(int numBytes) {
               computer.set_state(PRESSURIZATION_OFF);
             }
           }
-          Serial.println("Received AV_NET_DPR_PRESSURIZE command");
+          // Serial.println("Received AV_NET_DPR_PRESSURIZE command");
           break;
         }
 
@@ -92,7 +92,7 @@ void receiveEvent(int numBytes) {
         else if (cmd_abort == AV_NET_CMD_OFF) {
           computer.set_state(ABORT_ON_GROUND);
         }
-        Serial.println("Received AV_NET_DPR_ABORT command");
+        // Serial.println("Received AV_NET_DPR_ABORT command");
         break;
       }
 
@@ -101,7 +101,7 @@ void receiveEvent(int numBytes) {
         if (computer.get_memory().state == ABORT_ON_GROUND || computer.get_memory().state == MANUAL) {
           computer.set_state(MANUAL);
           dpr_memory_t memory = computer.get_memory();
-          Serial.println("Received AV_NET_DPR_VALVES_STATE command");
+          // Serial.println("Received AV_NET_DPR_VALVES_STATE command");
           uint32_t res;
           memcpy(&res, const_cast<const uint8_t*>(received_buffer), sizeof(res));
           uint8_t valves_vx = received_buffer[0];
@@ -144,7 +144,7 @@ void receiveEvent(int numBytes) {
         break;
       }
       case AV_NET_DPR_PASSIVATE: {
-        Serial.println("Received AV_NET_DPR_PASSIVATE command");
+        // Serial.println("Received AV_NET_DPR_PASSIVATE command");
         status_led(TEAL);
         dpr_memory_t memory = computer.get_memory();
         if (memory.state == PRESSURIZATION_OFF) {
@@ -153,17 +153,20 @@ void receiveEvent(int numBytes) {
       }
         break;
 
-      case AV_NET_DPR_RESET :
-        Serial.println("Received AV_NET_DPR_RESET command");
-        // status_led(TEAL);
-        computer.reset_dpr();
+      case AV_NET_DPR_RESET : {
+        dpr_memory_t memory = computer.get_memory();
+        if (memory.state == ABORT_ON_GROUND || memory.state == ABORT_IN_FLIGHT) {
+          status_led(RED);
+          computer.reset_dpr();
+        }
         break;
+      }
 
       default:
-        Serial.println("Unknown command received");
+        // Serial.println("Unknown command received");
         break;
     }
-    Serial.println("End of command processing");
+    // Serial.println("End of command processing");
   
     // clear I2C buffer for later communication
     Wire1.flush();
@@ -186,46 +189,46 @@ void requestEvent() {
   {
 
   case AV_NET_DPR_P_XTA:
-    Serial.println("Received AV_NET_DPR_P_TANK1 command");
+    // Serial.println("Received AV_NET_DPR_P_TANK1 command");
     resp_val_float = computer.filterTankPressure();
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
   case AV_NET_DPR_T_XTA:
-    Serial.println("Received AV_NET_DPR_T_TANK1 command");
+    // Serial.println("Received AV_NET_DPR_T_TANK1 command");
     resp_val_float = computer.filterTankTemp();
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
   case AV_NET_DPR_P_NCO:
-    Serial.println("Received AV_NET_DPR_P_COPV command");
+    // Serial.println("Received AV_NET_DPR_P_COPV command");
     resp_val_float = memory.copv_press;
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
   case AV_NET_DPR_T_NCO:
-    Serial.println("Received AV_NET_DPR_T_COPV command");
+    // Serial.println("Received AV_NET_DPR_T_COPV command");
     resp_val_float = memory.copv_temp;
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
   case AV_NET_DPR_T_COPV_EXT:
   case AV_NET_DPR_T_FLS_80:
-    Serial.println("Received AV_NET_DPR_T_EXT_COPV command");
+    // Serial.println("Received AV_NET_DPR_T_EXT_COPV command");
     resp_val_float = memory.t_ein_temp; // Currently no external sensor, return COPV temp
     is_resp_int = false; // Ensure we are sending a float response
     break;
 
   case AV_NET_DPR_T_FLS_90:
   case AV_NET_DPR_T_FLS_50:
-      Serial.println("Received AV_NET_DPR_T_FLS_EXT_ULH command");  
+      // Serial.println("Received AV_NET_DPR_T_FLS_EXT_ULH command");  
       resp_val_float = memory.t_oin_temp; // Currently no external sensor, return COPV temp
       is_resp_int = false; // Ensure we are sending a float response
       break;
 
   case AV_NET_DPR_VALVES_STATE: {
       status_led(GREEN);
-      Serial.println("Received AV_NET_PRB_VALVES_STATE read command");
+      // Serial.println("Received AV_NET_PRB_VALVES_STATE read command");
 
       uint8_t response_PN = (memory.PN_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
       uint8_t response_VX = (memory.VX_state) ? AV_NET_CMD_ON : AV_NET_CMD_OFF;
@@ -247,12 +250,12 @@ void requestEvent() {
 
   if (is_resp_int) {
     Wire1.write((uint8_t*)&resp_val_int, AV_NET_XFER_SIZE);
-    Serial.print("Sent int response: ");
-    Serial.println(resp_val_int);
+    // Serial.print("Sent int response: ");
+    // Serial.println(resp_val_int);
   } else {
     Wire1.write((uint8_t*)&resp_val_float, AV_NET_XFER_SIZE);
-    Serial.print("Sent float response: ");
-    Serial.println(resp_val_float);
+    // Serial.print("Sent float response: ");
+    // Serial.println(resp_val_float);
   }
   Wire1.flush(); // Ensure the data is sent immediately
 }
@@ -294,11 +297,11 @@ void setup() {
   analogReadResolution(12);
 
   Serial.begin(115200); // For debugging
-  Serial.println("PN Computer started");
+  // Serial.println("PN Computer started");
 
   turn_on_sequence();
 
-  Serial.println("PN Computer setup done");
+  // Serial.println("PN Computer setup done");
 }
 
 // PTE7300_I2C mySensor; // attach sensor
