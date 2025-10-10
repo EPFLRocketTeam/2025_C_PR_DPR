@@ -479,6 +479,12 @@ void DPRComputer::update(int time)
             break;
     }
 
+    Serial.print("VX state: ");
+    Serial.print(memory.VX_state);
+    Serial.print("     FSM: ");
+    Serial.println(memory.state);
+
+
     #ifdef PRB_DPR
 
         __sensor1_available = check_avail(TANK1);
