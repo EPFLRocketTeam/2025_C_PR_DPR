@@ -154,11 +154,7 @@ void receiveEvent(int numBytes) {
         break;
 
       case AV_NET_DPR_RESET : {
-        dpr_memory_t memory = computer.get_memory();
-        if (memory.state == ABORT_ON_GROUND || memory.state == ABORT_IN_FLIGHT) {
-          status_led(RED);
-          computer.reset_dpr();
-        }
+        computer.reset_dpr();
         break;
       }
 
